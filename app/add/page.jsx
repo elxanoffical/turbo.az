@@ -31,16 +31,28 @@ export default function AddAdPage() {
 
     if (userError || !user) return alert("Giriş etməmisiniz");
 
+    // Elan yaradılır
     const { data: ad, error: adError } = await supabase
       .from("car_ads")
-      .insert([{ ...formData, user_id: user.id, new: formData.new === "true", barter: formData.barter === "true" }])
+      .insert([
+        {
+          ...formData,
+          user_id: user.id,
+          new: formData.new === "true",
+          barter: formData.barter === "true",
+        },
+      ])
       .select()
       .single();
 
     if (adError) return alert("Elan yaradılmadı");
 
-    for (const file of images) {
+    let mainImageUrl = null;
+
+    for (let i = 0; i < images.length; i++) {
+      const file = images[i];
       const fileName = `${Date.now()}_${file.name}`;
+
       const { error: uploadError } = await supabase.storage
         .from("car-images")
         .upload(fileName, file);
@@ -50,17 +62,34 @@ export default function AddAdPage() {
         .from("car-images")
         .getPublicUrl(fileName);
 
+      const imageUrl = publicData?.publicUrl;
+      if (!imageUrl) continue;
+
+      // İlk şəkli əsas şəkil kimi saxla
+      if (i === 0) mainImageUrl = imageUrl;
+
       await supabase.from("car_images").insert([
-        { car_ad_id: ad.id, image_url: publicData.publicUrl },
+        { car_ad_id: ad.id, image_url: imageUrl },
       ]);
     }
 
+    // Əsas şəkli car_ads cədvəlinə yaz
+    if (mainImageUrl) {
+      await supabase
+        .from("car_ads")
+        .update({ main_image_url: mainImageUrl })
+        .eq("id", ad.id);
+    }
+
     reset();
-    // router.push("/my-ads");
+    router.push("/profile");
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4 max-w-2xl mx-auto">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="p-4 space-y-4 max-w-2xl mx-auto"
+    >
       <FormSelect register={register} name="city" label="Şəhər" options={cities} required />
       <FormInput register={register} name="brand" label="Marka" required />
       <FormInput register={register} name="model" label="Model" required />
