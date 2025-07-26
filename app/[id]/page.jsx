@@ -1,18 +1,18 @@
-// app/[id]/page.jsx
 import { createServerClient } from "@/lib/supabaseServer";
+import { cookies } from 'next/headers';
 
 export default async function AdDetailsPage({ params }) {
-  const supabase = await createServerClient(); 
-
-    const { id } = await params;
-
+  const cookieStore = cookies();
+  const supabaseClient = createServerClient();
+  const supabase = supabaseClient(cookieStore);
+  
+  const { id } = params; // params-i düzgün şəkildə destruct edirik
 
   const { data: ad, error } = await supabase
     .from("car_ads")
     .select("*, car_images(image_url)")
     .eq("id", id)
-    .eq("is_public", true)
-    .single();
+    .single(); // is_public filterini çıxardıq ki, admin bütün elanları görə bilsin
 
   if (!ad || error) {
     return (
@@ -55,7 +55,12 @@ export default async function AdDetailsPage({ params }) {
           <p><span className="font-semibold">Yürüş:</span> {ad.mileage || "N/A"} km</p>
           <p><span className="font-semibold">Sürət qutusu:</span> {ad.transmission || "N/A"}</p>
           <p><span className="font-semibold">Rəng:</span> {ad.color || "N/A"}</p>
-          <p><span className="font-semibold">Yerləşdirilmə tarixi:</span> {new Date(ad.created_at).toLocaleDateString("az-Latn-AZ")}</p>
+          <p><span className="font-semibold">Yerləşdirilmə tarixi:</span> 
+            {new Date(ad.created_at).toLocaleDateString("az-Latn-AZ")}
+          </p>
+          <p><span className="font-semibold">Status:</span>
+            {ad.is_public ? " Təsdiqlənib" : " Təsdiq gözləyir"}
+          </p>
         </div>
       </div>
 

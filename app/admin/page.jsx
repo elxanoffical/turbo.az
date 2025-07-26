@@ -33,31 +33,37 @@ export default function AdminPage() {
     const checkAdmin = async () => {
       try {
         // İlk öncə istifadəçinin giriş etdiyini yoxla
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
         if (sessionError || !session) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
 
         // Sonra istifadəçi məlumatlarını yoxla
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
         if (userError) throw userError;
-        if (!user || user.app_metadata?.role !== 'admin') {
-          router.push('/');
+        if (!user || user.app_metadata?.role !== "admin") {
+          router.push("/");
           return;
         }
 
         setAuthChecked(true);
         fetchAds();
       } catch (err) {
-        console.error('Admin check error:', err);
+        console.error("Admin check error:", err);
         setError(err.message);
-        router.push('/');
+        router.push("/");
       }
     };
-    
+
     checkAdmin();
   }, []);
 
@@ -67,7 +73,7 @@ export default function AdminPage() {
         .from("car_ads")
         .update({ is_public: true })
         .eq("id", id);
-      
+
       if (error) throw error;
       fetchAds();
     } catch (err) {
@@ -77,7 +83,7 @@ export default function AdminPage() {
 
   const handleDelete = async (id) => {
     if (!confirm("Bu elanı silmək istədiyinizə əminsiniz?")) return;
-    
+
     try {
       // Şəkilləri sil
       const { data: images, error: imgError } = await supabase
@@ -87,8 +93,8 @@ export default function AdminPage() {
 
       if (imgError) throw imgError;
 
-      const filesToDelete = images.map(img => {
-        const urlParts = img.image_url.split('/');
+      const filesToDelete = images.map((img) => {
+        const urlParts = img.image_url.split("/");
         return urlParts[urlParts.length - 1];
       });
 
@@ -99,8 +105,8 @@ export default function AdminPage() {
       // Elanı sil
       const { error } = await supabase.from("car_ads").delete().eq("id", id);
       if (error) throw error;
-      
-      setAds(prev => prev.filter(ad => ad.id !== id));
+
+      setAds((prev) => prev.filter((ad) => ad.id !== id));
     } catch (err) {
       alert("Silinmə xətası: " + err.message);
     }
@@ -118,7 +124,7 @@ export default function AdminPage() {
     return (
       <div className="p-6 max-w-6xl mx-auto">
         <h1 className="text-2xl font-semibold mb-4">Xəta: {error}</h1>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
         >
@@ -132,11 +138,12 @@ export default function AdminPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">
-          Admin Panel - Təsdiq Gözləyən Elanlar ({ads.filter(ad => !ad.is_public).length})
+          Admin Panel - Təsdiq Gözləyən Elanlar (
+          {ads.filter((ad) => !ad.is_public).length})
         </h1>
         <div className="flex gap-2">
           <button
-            onClick={() => router.push('/profile')}
+            onClick={() => router.push("/profile")}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
             Profilə qayıt
@@ -152,28 +159,35 @@ export default function AdminPage() {
 
       <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold mb-4">Təsdiq Gözləyən Elanlar</h2>
-          {ads.filter(ad => !ad.is_public).length > 0 ? (
+          <h2 className="text-xl font-semibold mb-4">
+            Təsdiq Gözləyən Elanlar
+          </h2>
+          {ads.filter((ad) => !ad.is_public).length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {ads.filter(ad => !ad.is_public).map(ad => (
-                <div key={ad.id} className="border rounded p-4 shadow bg-yellow-50">
-                  <AdCard ad={ad} showControls={false} />
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => handleApprove(ad.id)}
-                      className="flex-1 bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-                    >
-                      Təsdiqlə
-                    </button>
-                    <button
-                      onClick={() => handleDelete(ad.id)}
-                      className="flex-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                    >
-                      Sil
-                    </button>
+              {ads
+                .filter((ad) => !ad.is_public)
+                .map((ad) => (
+                  <div
+                    key={ad.id}
+                    className="border rounded p-4 shadow bg-yellow-50"
+                  >
+                    <AdCard ad={ad} showControls={false} />
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => handleApprove(ad.id)}
+                        className="flex-1 bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                      >
+                        Təsdiqlə
+                      </button>
+                      <button
+                        onClick={() => handleDelete(ad.id)}
+                        className="flex-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                      >
+                        Sil
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           ) : (
             <p className="text-gray-500">Təsdiq gözləyən elan yoxdur</p>
@@ -182,21 +196,30 @@ export default function AdminPage() {
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Təsdiqlənmiş Elanlar</h2>
-          {ads.filter(ad => ad.is_public).length > 0 ? (
+          {ads.filter((ad) => ad.is_public).length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {ads.filter(ad => ad.is_public).map(ad => (
-                <div key={ad.id} className="border rounded p-4 shadow bg-green-50">
-                  <AdCard ad={ad} showControls={false} />
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => handleDelete(ad.id)}
-                      className="flex-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                    >
-                      Sil
-                    </button>
+              {ads
+                .filter((ad) => ad.is_public)
+                .map((ad) => (
+                  <div
+                    key={ad.id}
+                    className="border rounded p-4 shadow bg-green-50"
+                  >
+                    <AdCard
+                      ad={ad}
+                      showControls={false}
+                      onClick={() => router.push(`/admin/${ad.id}`)} // Bu hissəni əlavə edin
+                    />
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => handleDelete(ad.id)}
+                        className="flex-1 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                      >
+                        Sil
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           ) : (
             <p className="text-gray-500">Təsdiqlənmiş elan yoxdur</p>
