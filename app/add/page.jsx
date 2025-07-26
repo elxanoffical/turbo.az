@@ -1,4 +1,4 @@
-// app/add-ad/page.jsx
+// app/add/page.jsx
 "use client";
 
 import { useRouter } from "next/navigation";

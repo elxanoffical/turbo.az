@@ -1,4 +1,3 @@
-// app/profile/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabaseClient";
@@ -40,7 +39,7 @@ export default function ProfilePage() {
       .eq("car_ad_id", adId);
 
     for (const img of images) {
-      const filePath = img.image_url.split("/").pop(); // simple basename
+      const filePath = img.image_url.split("/").pop();
       await supabase.storage.from("car-images").remove([filePath]);
     }
 
@@ -53,9 +52,18 @@ export default function ProfilePage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-4">
-        Elanlarım ({ads.length})
-      </h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-semibold">
+          Elanlarım ({ads.length})
+        </h1>
+        <button
+          onClick={() => router.push("/add")}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Yeni Elan Əlavə Et
+        </button>
+      </div>
+
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {ads.map((ad) => (
           <AdCard key={ad.id} ad={ad} onDelete={handleDelete} />
