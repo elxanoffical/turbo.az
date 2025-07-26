@@ -6,237 +6,299 @@ import { useForm } from "react-hook-form";
 import FormInput from "@/components/FormInput";
 import FormSelect from "@/components/FormSelect";
 import ImageUploader from "@/components/ImageUploader";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
-const cities = ["Bakı", "Gəncə", "Sumqayıt"];
-const bodies = ["Sedan", "SUV", "Hatchback"];
-const fuels = ["Benzin", "Dizel", "Elektrik"];
-const transmissions = ["Avtomat", "Mexaniki"];
-const drives = ["Arxa", "Ön", "Tam"];
-const markets = ["Avropa", "Amerika", "Yaponiya"];
-const colors = ["Qara", "Ağ", "Boz", "Qırmızı"];
+const formOptions = {
+  cities: ["Bakı", "Gəncə", "Sumqayıt"],
+  bodies: ["Sedan", "SUV", "Hatchback"],
+  fuels: ["Benzin", "Dizel", "Elektrik"],
+  transmissions: ["Avtomat", "Mexaniki"],
+  drives: ["Arxa", "Ön", "Tam"],
+  markets: ["Avropa", "Amerika", "Yaponiya"],
+  colors: ["Qara", "Ağ", "Boz", "Qırmızı"]
+};
 
 export default function AddAdPage() {
   const supabase = createClient();
   const router = useRouter();
   const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const { register, handleSubmit, reset } = useForm();
+  const [status, setStatus] = useState({ loading: false, error: null });
+  const { register, handleSubmit, formState: { errors } } = useForm();
 
+  // Auth yoxlaması
   useEffect(() => {
     const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/login");
-      }
+      const { session, error } = await supabase.auth.getSession();
+      if (error || !session) router.push("/login");
     };
     checkAuth();
   }, []);
 
+  const uploadImages = async (adId) => {
+    const uploadResults = [];
+    
+    for (const [index, file] of images.entries()) {
+      try {
+        const fileName = `${Date.now()}_${file.name}`;
+        
+        // Şəkil yüklə
+        const { error: uploadError } = await supabase.storage
+          .from("car-images")
+          .upload(fileName, file);
+        if (uploadError) throw uploadError;
+
+        // Public URL al
+        const { data: { publicUrl } } = await supabase.storage
+          .from("car-images")
+          .getPublicUrl(fileName);
+
+        // Verilənlər bazasına yaz
+        await supabase
+          .from("car_images")
+          .insert([{ car_ad_id: adId, image_url: publicUrl }]);
+
+        uploadResults.push({ success: true, url: publicUrl });
+        
+        // Əgər ilk şəkilse, əsas şəkil kimi təyin et
+        if (index === 0) {
+          await supabase
+            .from("car_ads")
+            .update({ main_image_url: publicUrl })
+            .eq("id", adId);
+        }
+      } catch (error) {
+        uploadResults.push({ 
+          success: false, 
+          error: `Şəkil ${index + 1} xətası: ${error.message}` 
+        });
+      }
+    }
+
+    return uploadResults;
+  };
+
   const onSubmit = async (formData) => {
-    setLoading(true);
-    setError(null);
+    setStatus({ loading: true, error: null });
 
     try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-      
+      // 1. İstifadəçi yoxlaması
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error("Giriş etməmisiniz");
 
+      // 2. Əsas elan məlumatlarını yarat
       const { data: ad, error: adError } = await supabase
         .from("car_ads")
-        .insert([
-          {
-            ...formData,
-            user_id: user.id,
-            new: formData.new === "true",
-            barter: formData.barter === "true",
-            is_public: false,
-          },
-        ])
+        .insert([{
+          ...formData,
+          user_id: user.id,
+          price: Number(formData.price),
+          year: Number(formData.year),
+          mileage: formData.mileage ? Number(formData.mileage) : null,
+          new: formData.new === "true",
+          barter: formData.barter === "true",
+          is_public: false
+        }])
         .select()
         .single();
 
-      if (adError) throw new Error("Elan yaradılmadı: " + adError.message);
+      if (adError) throw adError;
 
-      let uploadErrors = [];
-      let mainImageUrl = null;
-
-      for (let i = 0; i < images.length; i++) {
-        try {
-          const file = images[i];
-          const fileName = `${Date.now()}_${file.name}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from("car-images")
-            .upload(fileName, file);
-          if (uploadError) throw uploadError;
-
-          const { data: publicData } = supabase.storage
-            .from("car-images")
-            .getPublicUrl(fileName);
-
-          const imageUrl = publicData?.publicUrl;
-          if (!imageUrl) throw new Error("URL yaradılmadı");
-
-          if (i === 0) mainImageUrl = imageUrl;
-
-          await supabase
-            .from("car_images")
-            .insert([{ car_ad_id: ad.id, image_url: imageUrl }]);
-        } catch (uploadError) {
-          uploadErrors.push(`Şəkil ${i + 1} xətası: ${uploadError.message}`);
+      // 3. Şəkilləri yüklə
+      if (images.length > 0) {
+        const uploadResults = await uploadImages(ad.id);
+        const failedUploads = uploadResults.filter(r => !r.success);
+        
+        if (failedUploads.length > 0) {
+          throw new Error(
+            `Bəzi şəkillər yüklənmədi:\n${failedUploads.map(u => u.error).join("\n")}`
+          );
         }
       }
 
-      if (mainImageUrl) {
-        await supabase
-          .from("car_ads")
-          .update({ main_image_url: mainImageUrl })
-          .eq("id", ad.id);
-      }
-
-      if (uploadErrors.length > 0) {
-        setError("Bəzi şəkillər yüklənmədi:\n" + uploadErrors.join("\n"));
-      } else {
-        reset();
-        router.push("/profile");
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      // 4. Uğurlu olduqda profilə yönləndir
+      router.push("/profile");
+    } catch (error) {
+      setStatus({ loading: false, error: error.message });
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="p-4 space-y-4 max-w-2xl mx-auto"
-    >
-      <h1 className="text-2xl font-bold mb-4">Yeni Elan Əlavə Et</h1>
-
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
+    <div className="container mx-auto p-4 max-w-3xl">
+      <h1 className="text-2xl font-bold mb-6">Yeni Elan Əlavə Et</h1>
+      
+      {status.error && (
+        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
+          <p className="font-medium">Xəta baş verdi:</p>
+          <p className="mt-1">{status.error}</p>
         </div>
       )}
 
-      <FormSelect
-        register={register}
-        name="city"
-        label="Şəhər"
-        options={cities}
-        required
-      />
-      <FormInput register={register} name="brand" label="Marka" required />
-      <FormInput register={register} name="model" label="Model" required />
-      <FormInput
-        register={register}
-        name="year"
-        label="Buraxılış ili"
-        type="number"
-        required
-      />
-      <FormSelect
-        register={register}
-        name="body"
-        label="Ban növü"
-        options={bodies}
-      />
-      <FormSelect
-        register={register}
-        name="color"
-        label="Rəng"
-        options={colors}
-      />
-      <FormSelect
-        register={register}
-        name="fuel"
-        label="Yanacaq növü"
-        options={fuels}
-      />
-      <FormInput register={register} name="engine" label="Mühərrik həcmi" />
-      <FormInput
-        register={register}
-        name="mileage"
-        label="Yürüş (km)"
-        type="number"
-      />
-      <FormSelect
-        register={register}
-        name="transmission"
-        label="Sürət qutusu"
-        options={transmissions}
-      />
-      <FormSelect
-        register={register}
-        name="drive"
-        label="Ötürücü"
-        options={drives}
-      />
-      <FormSelect
-        register={register}
-        name="market"
-        label="Bazar tipi"
-        options={markets}
-      />
-      <FormInput
-        register={register}
-        name="owners"
-        label="Sahiblərin sayı"
-        type="number"
-      />
-      <FormInput
-        register={register}
-        name="seats"
-        label="Oturacaq sayı"
-        type="number"
-      />
-      <FormInput
-        register={register}
-        name="condition"
-        label="Texniki vəziyyət"
-      />
-      <FormInput
-        register={register}
-        name="price"
-        label="Qiymət"
-        type="number"
-        required
-      />
-      <FormSelect
-        register={register}
-        name="new"
-        label="Yeni?"
-        options={["true", "false"]}
-      />
-      <FormSelect
-        register={register}
-        name="barter"
-        label="Barter mümkündür?"
-        options={["true", "false"]}
-      />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid md:grid-cols-2 gap-6">
+          <FormSelect
+            register={register}
+            name="city"
+            label="Şəhər"
+            options={formOptions.cities}
+            error={errors.city}
+            required
+          />
+          <FormInput
+            register={register}
+            name="brand"
+            label="Marka"
+            error={errors.brand}
+            required
+          />
+          <FormInput
+            register={register}
+            name="model"
+            label="Model"
+            error={errors.model}
+            required
+          />
+          <FormInput
+            register={register}
+            name="year"
+            label="Buraxılış ili"
+            type="number"
+            error={errors.year}
+            required
+          />
+          <FormSelect
+            register={register}
+            name="body"
+            label="Ban növü"
+            options={formOptions.bodies}
+            error={errors.body}
+          />
+          <FormSelect
+            register={register}
+            name="color"
+            label="Rəng"
+            options={formOptions.colors}
+            error={errors.color}
+          />
+          <FormSelect
+            register={register}
+            name="fuel"
+            label="Yanacaq növü"
+            options={formOptions.fuels}
+            error={errors.fuel}
+          />
+          <FormInput
+            register={register}
+            name="engine"
+            label="Mühərrik həcmi"
+            error={errors.engine}
+          />
+          <FormInput
+            register={register}
+            name="mileage"
+            label="Yürüş (km)"
+            type="number"
+            error={errors.mileage}
+          />
+          <FormSelect
+            register={register}
+            name="transmission"
+            label="Sürət qutusu"
+            options={formOptions.transmissions}
+            error={errors.transmission}
+          />
+          <FormSelect
+            register={register}
+            name="drive"
+            label="Ötürücü"
+            options={formOptions.drives}
+            error={errors.drive}
+          />
+          <FormSelect
+            register={register}
+            name="market"
+            label="Bazar tipi"
+            options={formOptions.markets}
+            error={errors.market}
+          />
+          <FormInput
+            register={register}
+            name="owners"
+            label="Sahiblərin sayı"
+            type="number"
+            error={errors.owners}
+          />
+          <FormInput
+            register={register}
+            name="seats"
+            label="Oturacaq sayı"
+            type="number"
+            error={errors.seats}
+          />
+          <FormInput
+            register={register}
+            name="condition"
+            label="Texniki vəziyyət"
+            error={errors.condition}
+          />
+          <FormInput
+            register={register}
+            name="price"
+            label="Qiymət (AZN)"
+            type="number"
+            error={errors.price}
+            required
+          />
+          <FormSelect
+            register={register}
+            name="new"
+            label="Yeni?"
+            options={["true", "false"]}
+            error={errors.new}
+          />
+          <FormSelect
+            register={register}
+            name="barter"
+            label="Barter mümkündür?"
+            options={["true", "false"]}
+            error={errors.barter}
+          />
+        </div>
 
-      <ImageUploader onChange={setImages} />
+        <div>
+          <label className="block mb-2 font-medium">Şəkillər (Maksimum 10)</label>
+          <ImageUploader 
+            onChange={setImages} 
+            maxFiles={10}
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Ən azı 1 şəkil əlavə edin (ilk şəkil əsas şəkil kimi istifadə olunacaq)
+          </p>
+        </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className={`btn px-4 py-2 rounded text-white ${
-          loading ? "bg-gray-500" : "bg-blue-600 hover:bg-blue-700"
-        }`}
-      >
-        {loading ? "Yüklənir..." : "Elanı Yerləşdir"}
-      </button>
-
-      <div className="text-sm text-gray-500 mt-2">
-        Qeyd: Elan admin tərəfindən təsdiqləndikdən sonra ictimai görünəcək.
-      </div>
-    </form>
+        <div className="flex justify-between items-center pt-4 border-t">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50"
+          >
+            Geri
+          </button>
+          <button
+            type="submit"
+            disabled={status.loading}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded flex items-center gap-2 disabled:opacity-70"
+          >
+            {status.loading ? (
+              <>
+                <LoadingSpinner size="sm" />
+                <span>Yüklənir...</span>
+              </>
+            ) : (
+              "Elanı Yerləşdir"
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

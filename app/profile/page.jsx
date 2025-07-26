@@ -1,90 +1,98 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabaseClient";
 import AdCard from "@/components/AdCard";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function ProfilePage() {
   const supabase = createClient();
   const router = useRouter();
-  const [ads, setAds] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [data, setData] = useState({
+    ads: [],
+    loading: true,
+    error: null
+  });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // 1. İlk öncə session yoxlaması (sürətli yoxlama)
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError || !session) {
-          router.push('/login');
-          return;
-        }
-
-        // 2. Elanları yüklə
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        const { data: adsData, error: adsError } = await supabase
-          .from("car_ads")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        if (adsError) throw adsError;
-
-        setAds(adsData || []);
-      } catch (err) {
-        console.error("Profile error:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchUserAds = async () => {
+    try {
+      // 1. Session yoxlaması
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error("Giriş etməmisiniz");
       }
-    };
 
-    fetchData();
-  }, []);
+      // 2. Elanları gətir (RLS yalnız bu istifadəçininkiləri göstərəcək)
+      const { data: ads, error } = await supabase
+        .from("car_ads")
+        .select("*, car_images(image_url)")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setData({ ads, loading: false, error: null });
+    } catch (error) {
+      setData(prev => ({ ...prev, loading: false, error: error.message }));
+      if (error.message === "Giriş etməmisiniz") {
+        router.push("/login");
+      }
+    }
+  };
 
   const handleDelete = async (adId) => {
     if (!confirm("Bu elanı silmək istədiyinizə əminsiniz?")) return;
 
     try {
-      // Şəkilləri sil
+      // 1. Şəkilləri sil
       const { data: images } = await supabase
         .from("car_images")
-        .select("*")
+        .select("image_url")
         .eq("car_ad_id", adId);
 
-      for (const img of images) {
-        const filePath = img.image_url.split("/").pop();
-        await supabase.storage.from("car-images").remove([filePath]);
+      if (images?.length > 0) {
+        const filesToDelete = images.map(img => 
+          img.image_url.split('/').pop()
+        );
+        await supabase.storage.from("car-images").remove(filesToDelete);
       }
 
-      // Elanı sil
-      const { error } = await supabase.from("car_ads").delete().eq("id", adId);
+      // 2. Elanı sil (RLS yalnız sahibin silməsinə icazə verəcək)
+      const { error } = await supabase
+        .from("car_ads")
+        .delete()
+        .eq("id", adId);
+
       if (error) throw error;
 
-      setAds(prev => prev.filter(ad => ad.id !== adId));
-    } catch (err) {
-      alert("Silinmə xətası: " + err.message);
+      // 3. State-dən sil
+      setData(prev => ({
+        ...prev,
+        ads: prev.ads.filter(ad => ad.id !== adId)
+      }));
+    } catch (error) {
+      alert(`Silinmə xətası: ${error.message}`);
     }
   };
 
-  if (loading) {
+  useEffect(() => {
+    fetchUserAds();
+  }, []);
+
+  if (data.loading) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <h1 className="text-2xl font-semibold">Yüklənir...</h1>
+      <div className="flex justify-center items-center min-h-[300px]">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  if (error) {
+  if (data.error) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <h1 className="text-2xl font-semibold text-red-500">{error}</h1>
-        <button 
-          onClick={() => window.location.reload()}
-          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+      <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4">
+        <p>{data.error}</p>
+        <button
+          onClick={fetchUserAds}
+          className="mt-2 bg-red-600 text-white px-4 py-2 rounded"
         >
           Yenidən yoxla
         </button>
@@ -93,35 +101,38 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Elanlarım ({ads.length})</h1>
+    <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold">
+          Elanlarım <span className="text-gray-500">({data.ads.length})</span>
+        </h1>
         <button
           onClick={() => router.push("/add")}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
         >
-          Yeni Elan Əlavə Et
+          Yeni Elan +
         </button>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {ads.map((ad) => (
-          <AdCard 
-            key={ad.id} 
-            ad={ad} 
-            onDelete={handleDelete} 
-          />
-        ))}
-      </div>
-
-      {ads.length === 0 && (
-        <div className="text-center py-10">
-          <p className="text-gray-500">Hələ heç bir elan əlavə etməmisiniz</p>
+      {data.ads.length > 0 ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {data.ads.map(ad => (
+            <AdCard 
+              key={ad.id} 
+              ad={ad} 
+              onDelete={handleDelete}
+              onEdit={() => router.push(`/profile/edit/${ad.id}`)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 border-2 border-dashed rounded-lg">
+          <p className="text-gray-500 mb-4">Hələ heç bir elan yaratmamısınız</p>
           <button
             onClick={() => router.push("/add")}
-            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
           >
-            İlk Elanınızı Əlavə Edin
+            İlk Elanınızı Yarat
           </button>
         </div>
       )}
