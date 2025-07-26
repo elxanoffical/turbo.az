@@ -1,43 +1,70 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabaseServer";
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-export async function middleware(req) {
-  const supabase = await createServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const pathname = req.nextUrl.pathname;
-
-  // Public routes (no auth required)
-  const publicRoutes = ["/", "/login", "/signup", /^\/[a-zA-Z0-9\-]+$/];
-
-  const isPublic = publicRoutes.some((route) =>
-    typeof route === "string" ? pathname === route : route.test(pathname)
+export async function middleware(request) {
+  const cookieStore = cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value, options) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          cookieStore.set({ name, value: '', ...options });
+        },
+      },
+    }
   );
-  if (isPublic) return NextResponse.next();
 
-  // Not logged in
-  if (!session) {
-    return NextResponse.redirect(new URL("/login", req.url));
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const pathname = request.nextUrl.pathname;
+
+    // Public routes
+    const publicRoutes = [
+      "/",
+      "/login",
+      "/signup",
+      /^\/[a-zA-Z0-9\-]+$/
+    ];
+
+    const isPublic = publicRoutes.some(route => 
+      typeof route === "string" ? pathname === route : route.test(pathname)
+    );
+
+    if (isPublic) return NextResponse.next();
+
+    // Auth check
+    if (!session) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    // Role check for admin routes
+    if (pathname.startsWith("/admin")) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.app_metadata?.role !== 'admin') {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+    }
+
+    return NextResponse.next();
+  } catch (err) {
+    console.error('Middleware error:', err);
+    return NextResponse.next();
   }
-
-  const role = session.user.app_metadata?.role || "user";
-
-  // Block admin from accessing /profile
-  if (pathname.startsWith("/profile") && role === "admin") {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  // Block non-admins from accessing /admin
-  if (pathname.startsWith("/admin") && role !== "admin") {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  return NextResponse.next();
 }
 
-// ✅ /login artıq matcher-ə daxil DEYİL
 export const config = {
-  matcher: ["/profile/:path*", "/admin/:path*", "/:id"],
+  matcher: [
+    "/profile/:path*",
+    "/admin/:path*",
+    "/add",
+    "/edit/:path*"
+  ]
 };

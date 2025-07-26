@@ -2,12 +2,15 @@
 import { createServerClient } from "@/lib/supabaseServer";
 
 export default async function AdDetailsPage({ params }) {
-  const supabase = await createServerClient();
+  const supabase = await createServerClient(); 
+
+    const { id } = await params;
+
 
   const { data: ad, error } = await supabase
     .from("car_ads")
     .select("*, car_images(image_url)")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("is_public", true)
     .single();
 

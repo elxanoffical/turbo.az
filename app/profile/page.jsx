@@ -8,54 +8,85 @@ export default function ProfilePage() {
   const supabase = createClient();
   const router = useRouter();
   const [ads, setAds] = useState([]);
-
-  const fetchAds = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return router.push("/login");
-
-    const { data, error } = await supabase
-      .from("car_ads")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (!error) setAds(data);
-  };
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchAds();
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+      fetchAds();
+    };
+    checkAuth();
   }, []);
+
+  const fetchAds = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("İstifadəçi tapılmadı");
+
+      const { data, error } = await supabase
+        .from("car_ads")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setAds(data || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = async (adId) => {
     if (!confirm("Bu elanı silmək istədiyinizə əminsiniz?")) return;
 
-    // Əlaqəli şəkilləri sil
-    const { data: images } = await supabase
-      .from("car_images")
-      .select("*")
-      .eq("car_ad_id", adId);
+    try {
+      const { data: images } = await supabase
+        .from("car_images")
+        .select("*")
+        .eq("car_ad_id", adId);
 
-    for (const img of images) {
-      const filePath = img.image_url.split("/").pop();
-      await supabase.storage.from("car-images").remove([filePath]);
-    }
+      for (const img of images) {
+        const filePath = img.image_url.split("/").pop();
+        await supabase.storage.from("car-images").remove([filePath]);
+      }
 
-    // Elanı sil
-    const { error } = await supabase.from("car_ads").delete().eq("id", adId);
-    if (!error) {
-      setAds((prev) => prev.filter((ad) => ad.id !== adId));
+      const { error } = await supabase.from("car_ads").delete().eq("id", adId);
+      if (!error) {
+        setAds(prev => prev.filter(ad => ad.id !== adId));
+      }
+    } catch (err) {
+      alert("Silinmə xətası: " + err.message);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-5xl mx-auto">
+        <h1 className="text-2xl font-semibold">Yüklənir...</h1>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-5xl mx-auto">
+        <h1 className="text-2xl font-semibold text-red-500">{error}</h1>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">
-          Elanlarım ({ads.length})
-        </h1>
+        <h1 className="text-2xl font-semibold">Elanlarım ({ads.length})</h1>
         <button
           onClick={() => router.push("/add")}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
