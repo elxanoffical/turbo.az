@@ -12,42 +12,44 @@ export default function ProfilePage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
+    const fetchData = async () => {
+      try {
+        // 1. İlk öncə session yoxlaması (sürətli yoxlama)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          router.push('/login');
+          return;
+        }
+
+        // 2. Elanları yüklə
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        const { data: adsData, error: adsError } = await supabase
+          .from("car_ads")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (adsError) throw adsError;
+
+        setAds(adsData || []);
+      } catch (err) {
+        console.error("Profile error:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      fetchAds();
     };
-    checkAuth();
+
+    fetchData();
   }, []);
-
-  const fetchAds = async () => {
-    setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("İstifadəçi tapılmadı");
-
-      const { data, error } = await supabase
-        .from("car_ads")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setAds(data || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDelete = async (adId) => {
     if (!confirm("Bu elanı silmək istədiyinizə əminsiniz?")) return;
 
     try {
+      // Şəkilləri sil
       const { data: images } = await supabase
         .from("car_images")
         .select("*")
@@ -58,10 +60,11 @@ export default function ProfilePage() {
         await supabase.storage.from("car-images").remove([filePath]);
       }
 
+      // Elanı sil
       const { error } = await supabase.from("car_ads").delete().eq("id", adId);
-      if (!error) {
-        setAds(prev => prev.filter(ad => ad.id !== adId));
-      }
+      if (error) throw error;
+
+      setAds(prev => prev.filter(ad => ad.id !== adId));
     } catch (err) {
       alert("Silinmə xətası: " + err.message);
     }
@@ -79,6 +82,12 @@ export default function ProfilePage() {
     return (
       <div className="p-6 max-w-5xl mx-auto">
         <h1 className="text-2xl font-semibold text-red-500">{error}</h1>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+        >
+          Yenidən yoxla
+        </button>
       </div>
     );
   }
@@ -97,9 +106,25 @@ export default function ProfilePage() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {ads.map((ad) => (
-          <AdCard key={ad.id} ad={ad} onDelete={handleDelete} />
+          <AdCard 
+            key={ad.id} 
+            ad={ad} 
+            onDelete={handleDelete} 
+          />
         ))}
       </div>
+
+      {ads.length === 0 && (
+        <div className="text-center py-10">
+          <p className="text-gray-500">Hələ heç bir elan əlavə etməmisiniz</p>
+          <button
+            onClick={() => router.push("/add")}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            İlk Elanınızı Əlavə Edin
+          </button>
+        </div>
+      )}
     </div>
   );
 }

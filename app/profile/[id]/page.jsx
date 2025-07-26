@@ -3,13 +3,18 @@ import { createServerClient } from "@/lib/supabaseServer";
 import { notFound } from "next/navigation";
 
 export default async function AdDetailPage({ params }) {
-  const supabase = await createServerClient();
-  const { id } = await params;
+  const cookieStore = cookies();
+  const supabaseClient = createServerClient();
+  const supabase = supabaseClient(cookieStore);
+  const { id } = params;
 
+  // Yalnız user_id uyğun gələn elanları göstər
+  const { data: { user } } = await supabase.auth.getUser();
   const { data: ad, error } = await supabase
     .from("car_ads")
     .select("*")
     .eq("id", id)
+    .eq("user_id", user.id)
     .single();
 
   if (error || !ad) return notFound();

@@ -15,11 +15,12 @@ export default function AdminPage() {
   const fetchAds = async () => {
     setLoading(true);
     try {
+      // Bütün elanları çək (is_public-dən asılı olmayaraq)
       const { data, error } = await supabase
         .from("car_ads")
         .select("*")
         .order("created_at", { ascending: false });
-
+        
       if (error) throw error;
       setAds(data || []);
     } catch (err) {
@@ -28,7 +29,6 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     const checkAdmin = async () => {
       try {

@@ -8,7 +8,7 @@ export default async function AdDetailsPage({ params }) {
   
   const { id } = params; // params-i düzgün şəkildə destruct edirik
 
-  const { data: ad, error } = await supabase
+ const { data: ad, error } = await supabase
     .from("car_ads")
     .select("*, car_images(image_url)")
     .eq("id", id)
