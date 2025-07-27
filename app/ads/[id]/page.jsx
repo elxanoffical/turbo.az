@@ -15,7 +15,7 @@ export default async function AdDetailPage({ params }) {
       .from("car_ads")
       .select("*, car_images(image_url)")
       .eq("id", id)
-      .eq("is_public", true)
+      // .eq("is_public", true)
       .single();
 
     if (error || !ad) return notFound();
@@ -30,8 +30,8 @@ export default async function AdDetailPage({ params }) {
       <div className="max-w-4xl mx-auto p-6">
         {/* Geri düyməsi */}
         <div className="mb-4">
-          <Link href="/" className="text-blue-600 hover:underline">
-            &larr; Bütün elanlara qayıt
+          <Link href="/admin" className="text-blue-600 hover:underline">
+            &larr; elanlara qayıt
           </Link>
         </div>
 
