@@ -14,7 +14,7 @@ export default function AdCard({ ad, onDelete, showControls = true }) {
   return (
     <div
       onClick={handleCardClick}
-      className={`border rounded shadow p-3 flex flex-col transition duration-300 ${
+      className={`border rounded cursor-pointer shadow p-3 flex flex-col transition duration-300 ${
         !showControls ? "cursor-pointer hover:scale-95" : ""
       }`}
     >

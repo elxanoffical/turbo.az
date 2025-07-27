@@ -37,93 +37,110 @@ export default function AddAdPage() {
   }, []);
 
 
-  const uploadImages = async (adId) => {
-    const uploadResults = [];
-    
-    for (const [index, file] of images.entries()) {
-      try {
-        const fileName = `${Date.now()}_${file.name}`;
-        
-        // Şəkil yüklə
-        const { error: uploadError } = await supabase.storage
-          .from("car-images")
-          .upload(fileName, file);
-        if (uploadError) throw uploadError;
-
-        // Public URL al
-        const { data: { publicUrl } } = await supabase.storage
-          .from("car-images")
-          .getPublicUrl(fileName);
-
-        // Verilənlər bazasına yaz
-        await supabase
-          .from("car_images")
-          .insert([{ car_ad_id: adId, image_url: publicUrl }]);
-
-        uploadResults.push({ success: true, url: publicUrl });
-        
-        // Əgər ilk şəkilse, əsas şəkil kimi təyin et
-        if (index === 0) {
-          await supabase
-            .from("car_ads")
-            .update({ main_image_url: publicUrl })
-            .eq("id", adId);
-        }
-      } catch (error) {
-        uploadResults.push({ 
-          success: false, 
-          error: `Şəkil ${index + 1} xətası: ${error.message}` 
-        });
-      }
-    }
-
-    return uploadResults;
-  };
-
-  const onSubmit = async (formData) => {
-    setStatus({ loading: true, error: null });
-
+ const uploadImages = async (adId) => {
+  const uploadResults = [];
+  
+  for (const [index, file] of images.entries()) {
     try {
-      // 1. İstifadəçi yoxlaması
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error("Giriş etməmisiniz");
-
-      // 2. Əsas elan məlumatlarını yarat
-      const { data: ad, error: adError } = await supabase
-        .from("car_ads")
-        .insert([{
-          ...formData,
-          user_id: user.id,
-          price: Number(formData.price),
-          year: Number(formData.year),
-          mileage: formData.mileage ? Number(formData.mileage) : null,
-          new: formData.new === "true",
-          barter: formData.barter === "true",
-          is_public: false
-        }])
-        .select()
-        .single();
-
-      if (adError) throw adError;
-
-      // 3. Şəkilləri yüklə
-      if (images.length > 0) {
-        const uploadResults = await uploadImages(ad.id);
-        const failedUploads = uploadResults.filter(r => !r.success);
-        
-        if (failedUploads.length > 0) {
-          throw new Error(
-            `Bəzi şəkillər yüklənmədi:\n${failedUploads.map(u => u.error).join("\n")}`
-          );
-        }
+      const fileName = `${Date.now()}_${file.name}`;
+      
+      // Şəkil yüklə
+      const { error: uploadError } = await supabase.storage
+        .from("car-images")
+        .upload(fileName, file);
+      
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
       }
 
-      // 4. Uğurlu olduqda profilə yönləndir
-      router.push("/profile");
+      // Public URL al - düzgün yol ilə
+      const { data: { publicUrl } } = supabase.storage
+        .from("car-images")
+        .getPublicUrl(fileName);
+
+      console.log('Uploaded image URL:', publicUrl); // Debug üçün
+
+      // Verilənlər bazasına yaz
+      const { error: insertError } = await supabase
+        .from("car_images")
+        .insert([{ 
+          car_ad_id: adId, 
+          image_url: publicUrl 
+        }]);
+
+      if (insertError) throw insertError;
+
+      uploadResults.push({ success: true, url: publicUrl });
+      
+      // Əgər ilk şəkilse, əsas şəkil kimi təyin et
+      if (index === 0) {
+        const { error: updateError } = await supabase
+          .from("car_ads")
+          .update({ main_image_url: publicUrl })
+          .eq("id", adId);
+
+        if (updateError) throw updateError;
+      }
     } catch (error) {
-      setStatus({ loading: false, error: error.message });
+      console.error(`Şəkil ${index + 1} xətası:`, error);
+      uploadResults.push({ 
+        success: false, 
+        error: `Şəkil ${index + 1} xətası: ${error.message}` 
+      });
     }
-  };
+  }
+
+  return uploadResults;
+};
+
+ const onSubmit = async (formData) => {
+  setStatus({ loading: true, error: null });
+
+  try {
+    // 1. İstifadəçi yoxlaması
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) throw new Error("Giriş etməmisiniz");
+
+    // 2. Əsas elan məlumatlarını yarat
+    const { data: ad, error: adError } = await supabase
+      .from("car_ads")
+      .insert([{
+        ...formData,
+        user_id: user.id,
+        price: Number(formData.price),
+        year: Number(formData.year),
+        mileage: formData.mileage ? Number(formData.mileage) : null,
+        new: formData.new === "true",
+        barter: formData.barter === "true",
+        is_public: false
+      }])
+      .select()
+      .single();
+
+    if (adError) throw adError;
+
+    // 3. Şəkilləri yüklə
+    if (images.length > 0) {
+      const uploadResults = await uploadImages(ad.id);
+      const failedUploads = uploadResults.filter(r => !r.success);
+      
+      if (failedUploads.length > 0) {
+        throw new Error(
+          `Bəzi şəkillər yüklənmədi:\n${failedUploads.map(u => u.error).join("\n")}`
+        );
+      }
+    }
+
+    // 4. Uğurlu olduqda profilə yönləndir
+    setStatus({ loading: false, error: null });
+    router.push("/profile");
+    router.refresh(); // Əlavə etdik - səhifəni yenilə
+
+  } catch (error) {
+    setStatus({ loading: false, error: error.message });
+  }
+};
 
   return (
     <div className="container mx-auto p-4 max-w-3xl">

@@ -35,25 +35,23 @@ export default function ProfilePage() {
     checkAuth();
   }, []);
 
-  const fetchUserAds = async () => {
-    try {
-      setData(prev => ({ ...prev, loading: true, error: null }));
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { data: ads, error } = await supabase
-        .from("car_ads")
-        .select("*, car_images(image_url)")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+const fetchUserAds = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data: ads, error } = await supabase
+      .from("car_ads")
+      .select("*, car_images(image_url)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-      if (error) throw error;
-
-      setData({ ads, loading: false, error: null });
-    } catch (error) {
-      setData({ ads: [], loading: false, error: error.message });
-    }
-  };
+    if (error) throw error;
+    setData({ ads, loading: false, error: null });
+    router.refresh(); // Əlavə etdik
+  } catch (error) {
+    setData({ ads: [], loading: false, error: error.message });
+  }
+};
 
   const handleDelete = async (adId) => {
     if (!confirm("Bu elanı silmək istədiyinizə əminsiniz?")) return;
