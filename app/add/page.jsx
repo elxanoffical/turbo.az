@@ -26,13 +26,16 @@ export default function AddAdPage() {
   const { register, handleSubmit, formState: { errors } } = useForm();
 
   // Auth yoxlaması
-  useEffect(() => {
+    useEffect(() => {
     const checkAuth = async () => {
-      const { session, error } = await supabase.auth.getSession();
-      if (error || !session) router.push("/login");
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data?.user) {
+        router.push("/login");
+      }
     };
     checkAuth();
   }, []);
+
 
   const uploadImages = async (adId) => {
     const uploadResults = [];

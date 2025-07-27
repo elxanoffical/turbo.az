@@ -13,29 +13,45 @@ export default function ProfilePage() {
     loading: true,
     error: null
   });
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Auth yoxlaması
+   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+          console.log('İstifadəçi tapılmadı, girişə yönləndirilir');
+          router.push('/login');
+        } else {
+          setAuthChecked(true);
+          fetchUserAds();
+        }
+      } catch (err) {
+        console.error('Auth check error:', err);
+        router.push('/login');
+      }
+    };
+    checkAuth();
+  }, []);
 
   const fetchUserAds = async () => {
     try {
-      // 1. Session yoxlaması
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        throw new Error("Giriş etməmisiniz");
-      }
-
-      // 2. Elanları gətir (RLS yalnız bu istifadəçininkiləri göstərəcək)
+      setData(prev => ({ ...prev, loading: true, error: null }));
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data: ads, error } = await supabase
         .from("car_ads")
         .select("*, car_images(image_url)")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       setData({ ads, loading: false, error: null });
     } catch (error) {
-      setData(prev => ({ ...prev, loading: false, error: error.message }));
-      if (error.message === "Giriş etməmisiniz") {
-        router.push("/login");
-      }
+      setData({ ads: [], loading: false, error: error.message });
     }
   };
 
@@ -43,7 +59,7 @@ export default function ProfilePage() {
     if (!confirm("Bu elanı silmək istədiyinizə əminsiniz?")) return;
 
     try {
-      // 1. Şəkilləri sil
+      // Şəkilləri sil
       const { data: images } = await supabase
         .from("car_images")
         .select("image_url")
@@ -56,7 +72,7 @@ export default function ProfilePage() {
         await supabase.storage.from("car-images").remove(filesToDelete);
       }
 
-      // 2. Elanı sil (RLS yalnız sahibin silməsinə icazə verəcək)
+      // Elanı sil
       const { error } = await supabase
         .from("car_ads")
         .delete()
@@ -64,21 +80,29 @@ export default function ProfilePage() {
 
       if (error) throw error;
 
-      // 3. State-dən sil
-      setData(prev => ({
-        ...prev,
-        ads: prev.ads.filter(ad => ad.id !== adId)
-      }));
+      await fetchUserAds();
     } catch (error) {
       alert(`Silinmə xətası: ${error.message}`);
     }
   };
 
-  useEffect(() => {
-    fetchUserAds();
-  }, []);
+ const handleAddNew = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        console.log('İstifadəçi yeni elan əlavə etmək istəyərkən doğrulanmayıb');
+        throw new Error('Təsdiqlənməyib');
+      }
+      router.push('/add');
+    } catch (error) {
+      console.error('Add new ad error:', error);
+      await supabase.auth.signOut();
+      router.push('/login');
+    }
+  };
 
-  if (data.loading) {
+
+  if (!authChecked || data.loading) {
     return (
       <div className="flex justify-center items-center min-h-[300px]">
         <LoadingSpinner size="lg" />
@@ -90,12 +114,20 @@ export default function ProfilePage() {
     return (
       <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4">
         <p>{data.error}</p>
-        <button
-          onClick={fetchUserAds}
-          className="mt-2 bg-red-600 text-white px-4 py-2 rounded"
-        >
-          Yenidən yoxla
-        </button>
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={fetchUserAds}
+            className="bg-red-600 text-white px-4 py-2 rounded"
+          >
+            Yenidən yoxla
+          </button>
+          <button
+            onClick={() => router.push('/login')}
+            className="bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            Yenidən daxil ol
+          </button>
+        </div>
       </div>
     );
   }
@@ -107,7 +139,7 @@ export default function ProfilePage() {
           Elanlarım <span className="text-gray-500">({data.ads.length})</span>
         </h1>
         <button
-          onClick={() => router.push("/add")}
+          onClick={handleAddNew}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
         >
           Yeni Elan +
@@ -129,7 +161,7 @@ export default function ProfilePage() {
         <div className="text-center py-12 border-2 border-dashed rounded-lg">
           <p className="text-gray-500 mb-4">Hələ heç bir elan yaratmamısınız</p>
           <button
-            onClick={() => router.push("/add")}
+            onClick={handleAddNew}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
           >
             İlk Elanınızı Yarat
