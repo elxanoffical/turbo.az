@@ -11,47 +11,52 @@ export default function ProfilePage() {
   const [data, setData] = useState({
     ads: [],
     loading: true,
-    error: null
+    error: null,
   });
   const [authChecked, setAuthChecked] = useState(false);
 
   // Auth yoxlaması
-   useEffect(() => {
+  useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
         if (error || !user) {
-          console.log('İstifadəçi tapılmadı, girişə yönləndirilir');
-          router.push('/login');
+          console.log("İstifadəçi tapılmadı, girişə yönləndirilir");
+          router.push("/login");
         } else {
           setAuthChecked(true);
           fetchUserAds();
         }
       } catch (err) {
-        console.error('Auth check error:', err);
-        router.push('/login');
+        console.error("Auth check error:", err);
+        router.push("/login");
       }
     };
     checkAuth();
   }, []);
 
-const fetchUserAds = async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const { data: ads, error } = await supabase
-      .from("car_ads")
-      .select("*, car_images(image_url)")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+  const fetchUserAds = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (error) throw error;
-    setData({ ads, loading: false, error: null });
-    router.refresh(); // Əlavə etdik
-  } catch (error) {
-    setData({ ads: [], loading: false, error: error.message });
-  }
-};
+      const { data: ads, error } = await supabase
+        .from("car_ads")
+        .select("*, car_images(image_url)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setData({ ads, loading: false, error: null });
+      router.refresh(); // Əlavə etdik
+    } catch (error) {
+      setData({ ads: [], loading: false, error: error.message });
+    }
+  };
 
   const handleDelete = async (adId) => {
     if (!confirm("Bu elanı silmək istədiyinizə əminsiniz?")) return;
@@ -64,17 +69,14 @@ const fetchUserAds = async () => {
         .eq("car_ad_id", adId);
 
       if (images?.length > 0) {
-        const filesToDelete = images.map(img => 
-          img.image_url.split('/').pop()
+        const filesToDelete = images.map((img) =>
+          img.image_url.split("/").pop()
         );
         await supabase.storage.from("car-images").remove(filesToDelete);
       }
 
       // Elanı sil
-      const { error } = await supabase
-        .from("car_ads")
-        .delete()
-        .eq("id", adId);
+      const { error } = await supabase.from("car_ads").delete().eq("id", adId);
 
       if (error) throw error;
 
@@ -84,21 +86,25 @@ const fetchUserAds = async () => {
     }
   };
 
- const handleAddNew = async () => {
+  const handleAddNew = async () => {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
       if (error || !user) {
-        console.log('İstifadəçi yeni elan əlavə etmək istəyərkən doğrulanmayıb');
-        throw new Error('Təsdiqlənməyib');
+        console.log(
+          "İstifadəçi yeni elan əlavə etmək istəyərkən doğrulanmayıb"
+        );
+        throw new Error("Təsdiqlənməyib");
       }
-      router.push('/add');
+      router.push("/add");
     } catch (error) {
-      console.error('Add new ad error:', error);
+      console.error("Add new ad error:", error);
       await supabase.auth.signOut();
-      router.push('/login');
+      router.push("/login");
     }
   };
-
 
   if (!authChecked || data.loading) {
     return (
@@ -120,7 +126,7 @@ const fetchUserAds = async () => {
             Yenidən yoxla
           </button>
           <button
-            onClick={() => router.push('/login')}
+            onClick={() => router.push("/login")}
             className="bg-blue-600 text-white px-4 py-2 rounded"
           >
             Yenidən daxil ol
@@ -146,10 +152,12 @@ const fetchUserAds = async () => {
 
       {data.ads.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {data.ads.map(ad => (
-            <AdCard 
-              key={ad.id} 
-              ad={ad} 
+          {data.ads.map((ad) => (
+            <AdCard
+              key={ad.id}
+              ad={ad}
+              showControls={true}
+              isProfile={true}
               onDelete={handleDelete}
               onEdit={() => router.push(`/profile/edit/${ad.id}`)}
             />
