@@ -39,7 +39,7 @@ export default function AdminPage() {
         .eq("id", id);
 
       if (error) throw error;
-      refreshAds();
+      await refreshAds();
     } catch (err) {
       alert("Təsdiqləmə xətası: " + err.message);
     }

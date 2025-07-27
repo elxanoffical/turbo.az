@@ -11,7 +11,7 @@ export default async function Home() {
     // Yalnızca ictimai elanları gətir
     const { data: ads, error } = await supabase
       .from("car_ads")
-      .select("*, car_images(image_url)")
+      .select("*")
       .eq("is_public", true)
       .order("created_at", { ascending: false });
 
