@@ -15,22 +15,22 @@ const formOptions = {
   transmissions: ["Avtomat", "Mexaniki"],
   drives: ["Arxa", "Ön", "Tam"],
   markets: ["Avropa", "Amerika", "Yaponiya"],
-  colors: ["Qara", "Ağ", "Boz", "Qırmızı"]
+  colors: ["Qara", "Ağ", "Boz", "Qırmızı"],
 };
 
 export default function EditAdPage() {
   const supabase = createClient();
   const router = useRouter();
   const { id } = useParams();
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors }, 
-    reset, 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
     setValue,
-    watch
+    watch,
   } = useForm();
-  
+
   const [images, setImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
   const [status, setStatus] = useState({ loading: false, error: null });
@@ -40,10 +40,13 @@ export default function EditAdPage() {
   useEffect(() => {
     const fetchAdData = async () => {
       setStatus({ loading: true, error: null });
-      
+
       try {
         // 1. İstifadəçi yoxlaması
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
         if (userError || !user) {
           throw new Error("Giriş etməmisiniz");
         }
@@ -64,7 +67,7 @@ export default function EditAdPage() {
         const formData = {
           ...ad,
           new: ad.new ? "true" : "false",
-          barter: ad.barter ? "true" : "false"
+          barter: ad.barter ? "true" : "false",
         };
 
         Object.keys(formData).forEach((key) => {
@@ -75,7 +78,7 @@ export default function EditAdPage() {
 
         // 4. Mövcud şəkilləri saxla
         if (ad.car_images) {
-          setExistingImages(ad.car_images.map(img => img.image_url));
+          setExistingImages(ad.car_images.map((img) => img.image_url));
         }
 
         // 5. Əsas şəkili saxla
@@ -98,24 +101,24 @@ export default function EditAdPage() {
   // Yeni şəkilləri yüklə
   const uploadNewImages = async (adId) => {
     if (!images || images.length === 0) return [];
-    
+
     const uploadResults = [];
-    
+
     for (const [index, file] of Array.from(images).entries()) {
       try {
         const fileName = `${Date.now()}_${file.name}`;
-        
+
         // Şəkil yüklə
         const { error: uploadError } = await supabase.storage
           .from("car-images")
           .upload(fileName, file);
-        
+
         if (uploadError) throw uploadError;
 
         // Public URL al
-        const { data: { publicUrl } } = await supabase.storage
-          .from("car-images")
-          .getPublicUrl(fileName);
+        const {
+          data: { publicUrl },
+        } = await supabase.storage.from("car-images").getPublicUrl(fileName);
 
         // Verilənlər bazasına yaz
         await supabase
@@ -123,30 +126,26 @@ export default function EditAdPage() {
           .insert([{ car_ad_id: adId, image_url: publicUrl }]);
 
         uploadResults.push(publicUrl);
-        
       } catch (error) {
         console.error(`Şəkil ${index + 1} xətası:`, error);
         uploadResults.push(null);
       }
     }
 
-    return uploadResults.filter(url => url !== null);
+    return uploadResults.filter((url) => url !== null);
   };
 
   // Şəkil sil
   const deleteImage = async (imageUrl) => {
     try {
-      const fileName = imageUrl.split('/').pop();
-      
+      const fileName = imageUrl.split("/").pop();
+
       // Storage-dan sil
       await supabase.storage.from("car-images").remove([fileName]);
-      
+
       // Verilənlər bazasından sil
-      await supabase
-        .from("car_images")
-        .delete()
-        .eq("image_url", imageUrl);
-      
+      await supabase.from("car_images").delete().eq("image_url", imageUrl);
+
       return true;
     } catch (error) {
       console.error("Şəkil silinmə xətası:", error);
@@ -157,10 +156,13 @@ export default function EditAdPage() {
   // Form göndərildikdə
   const onSubmit = async (formData) => {
     setStatus({ loading: true, error: null });
-    
+
     try {
       // 1. İstifadəçi yoxlaması
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
       if (userError || !user) {
         throw new Error("Giriş etməmisiniz");
       }
@@ -169,14 +171,14 @@ export default function EditAdPage() {
       const newImageUrls = await uploadNewImages(id);
 
       // 3. Silinən şəkilləri təmizlə
-      const imagesToKeep = existingImages.filter(img => 
+      const imagesToKeep = existingImages.filter((img) =>
         formData.keep_images?.includes(img)
       );
-      
-      const imagesToDelete = existingImages.filter(img => 
-        !formData.keep_images?.includes(img)
+
+      const imagesToDelete = existingImages.filter(
+        (img) => !formData.keep_images?.includes(img)
       );
-      
+
       for (const imgUrl of imagesToDelete) {
         await deleteImage(imgUrl);
       }
@@ -211,17 +213,18 @@ export default function EditAdPage() {
           barter: formData.barter === "true",
           main_image_url: mainImageUrl,
           description: formData.description,
-          is_public: false
+          is_public: false,
         })
         .eq("id", id)
         .eq("user_id", user.id);
+
+      console.log("formData.keep_images:", formData.keep_images);
 
       if (updateError) throw updateError;
 
       // 6. Uğurlu olduqda profilə yönləndir
       alert("Elan uğurla yeniləndi! Admin təsdiqindən sonra ictimai olacaq.");
       router.push("/profile");
-      
     } catch (error) {
       setStatus({ loading: false, error: error.message });
       alert("Yeniləmə xətası: " + error.message);
@@ -257,7 +260,7 @@ export default function EditAdPage() {
   return (
     <div className="p-4 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Elanı Redaktə Et</h1>
-      
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid md:grid-cols-2 gap-6">
           <FormSelect
@@ -306,7 +309,7 @@ export default function EditAdPage() {
           />
           <FormSelect
             register={register}
-            name="fuel"  // fuel_type əvəzinə fuel
+            name="fuel" // fuel_type əvəzinə fuel
             label="Yanacaq növü"
             options={formOptions.fuels}
             error={errors.fuel}
@@ -401,14 +404,18 @@ export default function EditAdPage() {
                     alt={`Mövcud şəkil ${index + 1}`}
                     className="w-32 h-32 object-cover rounded border-2 border-transparent transition-all"
                     style={{
-                      borderColor: watch("main_image_url") === url ? "#3b82f6" : "transparent"
+                      borderColor:
+                        watch("main_image_url") === url
+                          ? "#3b82f6"
+                          : "transparent",
                     }}
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex flex-col justify-between p-2 opacity-0 group-hover:opacity-100">
                     <label className="text-white text-sm flex items-center">
                       <input
                         type="checkbox"
-                        {...register(`keep_images.${index}`)}
+                        {...register("keep_images")}
+                        value={url}
                         defaultChecked
                         className="mr-1"
                       />
@@ -433,9 +440,11 @@ export default function EditAdPage() {
 
         {/* Yeni şəkillər */}
         <div>
-          <label className="block mb-2 font-medium">Yeni Şəkillər Əlavə Et (Maksimum {10 - existingImages.length})</label>
-          <ImageUploader 
-            onChange={setImages} 
+          <label className="block mb-2 font-medium">
+            Yeni Şəkillər Əlavə Et (Maksimum {10 - existingImages.length})
+          </label>
+          <ImageUploader
+            onChange={setImages}
             maxFiles={10 - existingImages.length}
           />
         </div>

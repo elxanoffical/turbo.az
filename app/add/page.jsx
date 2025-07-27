@@ -15,7 +15,7 @@ const formOptions = {
   transmissions: ["Avtomat", "Mexaniki"],
   drives: ["Arxa", "Ön", "Tam"],
   markets: ["Avropa", "Amerika", "Yaponiya"],
-  colors: ["Qara", "Ağ", "Boz", "Qırmızı"]
+  colors: ["Qara", "Ağ", "Boz", "Qırmızı"],
 };
 
 export default function AddAdPage() {
@@ -23,10 +23,14 @@ export default function AddAdPage() {
   const router = useRouter();
   const [images, setImages] = useState([]);
   const [status, setStatus] = useState({ loading: false, error: null });
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
 
   // Auth yoxlaması
-    useEffect(() => {
+  useEffect(() => {
     const checkAuth = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data?.user) {
@@ -36,116 +40,124 @@ export default function AddAdPage() {
     checkAuth();
   }, []);
 
+  const uploadImages = async (adId) => {
+    const uploadResults = [];
 
- const uploadImages = async (adId) => {
-  const uploadResults = [];
-  
-  for (const [index, file] of images.entries()) {
+    for (const [index, file] of images.entries()) {
+      try {
+        const fileName = `${Date.now()}_${file.name}`;
+
+        // Şəkil yüklə
+        const { error: uploadError } = await supabase.storage
+          .from("car-images")
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          throw uploadError;
+        }
+
+        // Public URL al
+        const { data } = supabase.storage
+          .from("car-images")
+          .getPublicUrl(fileName);
+        const publicUrl = data.publicUrl;
+
+        if (!publicUrl) throw new Error("Şəkil üçün public URL tapılmadı");
+
+        // Verilənlər bazasına yaz
+        const { error: insertError } = await supabase
+          .from("car_images")
+          .insert([
+            {
+              car_ad_id: adId,
+              image_url: publicUrl,
+            },
+          ]);
+
+        if (insertError) throw insertError;
+
+        uploadResults.push({ success: true, url: publicUrl });
+
+        // Əgər ilk şəkildirsə, əsas şəkil kimi təyin et
+        if (index === 0) {
+          const { error: updateError } = await supabase
+            .from("car_ads")
+            .update({ main_image_url: publicUrl })
+            .eq("id", adId);
+
+          if (updateError) throw updateError;
+        }
+      } catch (error) {
+        console.error(`Şəkil ${index + 1} xətası:`, error);
+        uploadResults.push({
+          success: false,
+          error: `Şəkil ${index + 1} xətası: ${error.message}`,
+        });
+      }
+    }
+
+    return uploadResults;
+  };
+
+  const onSubmit = async (formData) => {
+    setStatus({ loading: true, error: null });
+
     try {
-      const fileName = `${Date.now()}_${file.name}`;
-      
-      // Şəkil yüklə
-      const { error: uploadError } = await supabase.storage
-        .from("car-images")
-        .upload(fileName, file);
-      
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
+      // 1. İstifadəçi yoxlaması
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Giriş etməmisiniz");
+
+      // 2. Əsas elan məlumatlarını yarat
+      const { data: ad, error: adError } = await supabase
+        .from("car_ads")
+        .insert([
+          {
+            ...formData,
+            user_id: user.id,
+            price: Number(formData.price),
+            year: Number(formData.year),
+            mileage: formData.mileage ? Number(formData.mileage) : null,
+            new: formData.new === "true",
+            barter: formData.barter === "true",
+            is_public: false,
+          },
+        ])
+        .select()
+        .single();
+
+      if (adError) throw adError;
+
+      // 3. Şəkilləri yüklə
+      if (images.length > 0) {
+        const uploadResults = await uploadImages(ad.id);
+        const failedUploads = uploadResults.filter((r) => !r.success);
+
+        if (failedUploads.length > 0) {
+          throw new Error(
+            `Bəzi şəkillər yüklənmədi:\n${failedUploads
+              .map((u) => u.error)
+              .join("\n")}`
+          );
+        }
       }
 
-      // Public URL al - düzgün yol ilə
-      const { data: { publicUrl } } = supabase.storage
-        .from("car-images")
-        .getPublicUrl(fileName);
-
-      console.log('Uploaded image URL:', publicUrl); // Debug üçün
-
-      // Verilənlər bazasına yaz
-      const { error: insertError } = await supabase
-        .from("car_images")
-        .insert([{ 
-          car_ad_id: adId, 
-          image_url: publicUrl 
-        }]);
-
-      if (insertError) throw insertError;
-
-      uploadResults.push({ success: true, url: publicUrl });
-      
-      // Əgər ilk şəkilse, əsas şəkil kimi təyin et
-      if (index === 0) {
-        const { error: updateError } = await supabase
-          .from("car_ads")
-          .update({ main_image_url: publicUrl })
-          .eq("id", adId);
-
-        if (updateError) throw updateError;
-      }
+      // 4. Uğurlu olduqda profilə yönləndir
+      setStatus({ loading: false, error: null });
+      router.push("/profile");
+      router.refresh(); // Əlavə etdik - səhifəni yenilə
     } catch (error) {
-      console.error(`Şəkil ${index + 1} xətası:`, error);
-      uploadResults.push({ 
-        success: false, 
-        error: `Şəkil ${index + 1} xətası: ${error.message}` 
-      });
+      setStatus({ loading: false, error: error.message });
     }
-  }
-
-  return uploadResults;
-};
-
- const onSubmit = async (formData) => {
-  setStatus({ loading: true, error: null });
-
-  try {
-    // 1. İstifadəçi yoxlaması
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error("Giriş etməmisiniz");
-
-    // 2. Əsas elan məlumatlarını yarat
-    const { data: ad, error: adError } = await supabase
-      .from("car_ads")
-      .insert([{
-        ...formData,
-        user_id: user.id,
-        price: Number(formData.price),
-        year: Number(formData.year),
-        mileage: formData.mileage ? Number(formData.mileage) : null,
-        new: formData.new === "true",
-        barter: formData.barter === "true",
-        is_public: false
-      }])
-      .select()
-      .single();
-
-    if (adError) throw adError;
-
-    // 3. Şəkilləri yüklə
-    if (images.length > 0) {
-      const uploadResults = await uploadImages(ad.id);
-      const failedUploads = uploadResults.filter(r => !r.success);
-      
-      if (failedUploads.length > 0) {
-        throw new Error(
-          `Bəzi şəkillər yüklənmədi:\n${failedUploads.map(u => u.error).join("\n")}`
-        );
-      }
-    }
-
-    // 4. Uğurlu olduqda profilə yönləndir
-    setStatus({ loading: false, error: null });
-    router.push("/profile");
-    router.refresh(); // Əlavə etdik - səhifəni yenilə
-
-  } catch (error) {
-    setStatus({ loading: false, error: error.message });
-  }
-};
+  };
 
   return (
     <div className="container mx-auto p-4 max-w-3xl">
       <h1 className="text-2xl font-bold mb-6">Yeni Elan Əlavə Et</h1>
-      
+
       {status.error && (
         <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
           <p className="font-medium">Xəta baş verdi:</p>
@@ -285,13 +297,13 @@ export default function AddAdPage() {
         </div>
 
         <div>
-          <label className="block mb-2 font-medium">Şəkillər (Maksimum 10)</label>
-          <ImageUploader 
-            onChange={setImages} 
-            maxFiles={10}
-          />
+          <label className="block mb-2 font-medium">
+            Şəkillər (Maksimum 10)
+          </label>
+          <ImageUploader onChange={setImages} maxFiles={10} />
           <p className="mt-1 text-sm text-gray-500">
-            Ən azı 1 şəkil əlavə edin (ilk şəkil əsas şəkil kimi istifadə olunacaq)
+            Ən azı 1 şəkil əlavə edin (ilk şəkil əsas şəkil kimi istifadə
+            olunacaq)
           </p>
         </div>
 

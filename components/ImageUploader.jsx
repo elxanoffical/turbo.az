@@ -1,7 +1,10 @@
-// components/ImageUploader.jsx
 export default function ImageUploader({ onChange, maxFiles }) {
   const handleChange = (e) => {
-    const files = Array.from(e.target.files).slice(0, maxFiles);
+    let files = Array.from(e.target.files);
+    if (files.length > maxFiles) {
+      alert(`Maksimum ${maxFiles} şəkil seçə bilərsiniz.`);
+      files = files.slice(0, maxFiles);
+    }
     onChange(files);
   };
 

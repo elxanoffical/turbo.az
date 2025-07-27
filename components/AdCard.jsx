@@ -67,7 +67,7 @@ export default function AdCard({
     >
       <div className="relative h-48 w-full mb-2">
         <Image
-          src={ad.main_image_url || "/placeholder.jpg"}
+          src={ad.main_image_url || ad.car_images[0]?.image_url || "/placeholder.png"}
           alt={`${ad.brand} ${ad.model}`}
           fill
           className="object-cover rounded"
