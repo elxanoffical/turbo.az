@@ -1,34 +1,63 @@
 import { createServerClient } from "@/lib/supabaseServer";
 import { cookies } from "next/headers";
 import AdCard from "@/components/AdCard";
+import FilterBar from "@/components/FilterBar";
 
-export default async function Home() {
-  // CookieStore-u async şəkildə alırıq
+export default async function Home({ searchParams }) {
   const cookieStore = cookies();
   const supabase = createServerClient(cookieStore);
 
   try {
-    // Yalnızca ictimai elanları gətir
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { data: ads, error } = await supabase
+    const query = supabase
       .from("car_ads")
       .select(
         `
-    *,
-    car_images(image_url),
-    favorites(user_id)
-  `
+        *,
+        car_images(image_url),
+        favorites(user_id)
+      `
       )
-      .eq("is_public", true)
-      .order("created_at", { ascending: false });
+      .eq("is_public", true);
+
+    // Filters from query params
+    const {
+      brand,
+      model,
+      city,
+      new: isNew,
+      barter,
+      body,
+      price_min,
+      price_max,
+      year_min,
+      year_max,
+    } = searchParams;
+
+    if (brand) query.ilike("brand", `%${brand}%`);
+    if (model) query.ilike("model", `%${model}%`);
+    if (city) query.ilike("city", `%${city}%`);
+    if (body) query.eq("body", body);
+    if (isNew === "true") query.eq("new", true);
+    if (isNew === "false") query.eq("new", false);
+    if (barter === "true") query.eq("barter", true);
+    if (price_min) query.gte("price", Number(price_min));
+    if (price_max) query.lte("price", Number(price_max));
+    if (year_min) query.gte("year", Number(year_min));
+    if (year_max) query.lte("year", Number(year_max));
+
+    const { data: ads, error } = await query.order("created_at", {
+      ascending: false,
+    });
 
     if (error) throw error;
 
     return (
       <div className="p-6 max-w-6xl mx-auto">
+        <FilterBar />
         <h1 className="text-3xl font-bold mb-6">Son Elanlar</h1>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {ads?.map((ad) => {
@@ -56,9 +85,7 @@ export default async function Home() {
     return (
       <div className="p-6 max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Xəta baş verdi</h1>
-        <p className="text-red-500">
-          Zəhmət olmasa daha sonra yenidən cəhd edin
-        </p>
+        <p className="text-red-500">Zəhmət olmasa daha sonra yenidən cəhd edin</p>
       </div>
     );
   }
