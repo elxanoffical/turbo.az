@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabaseClient";
+import { FaHeart, FaRegHeart } from "react-icons/fa";
 
 export default function FavoriteButton({ adId, initialFavorite }) {
   const supabase = createClient();
@@ -29,8 +30,12 @@ export default function FavoriteButton({ adId, initialFavorite }) {
   };
 
   return (
-    <button onClick={toggleFavorite} aria-label="Favoritə əlavə et">
-      {isFavorite ? "★" : "☆"}
+    <button
+      onClick={toggleFavorite}
+      aria-label="Favoritə əlavə et"
+      className="text-xl text-red-600 cursor-pointer"
+    >
+      {isFavorite ? <FaHeart /> : <FaRegHeart />}
     </button>
   );
 }

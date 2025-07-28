@@ -9,9 +9,19 @@ export default async function Home() {
 
   try {
     // Yalnızca ictimai elanları gətir
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     const { data: ads, error } = await supabase
       .from("car_ads")
-      .select("*")
+      .select(
+        `
+    *,
+    car_images(image_url),
+    favorites(user_id)
+  `
+      )
       .eq("is_public", true)
       .order("created_at", { ascending: false });
 
@@ -21,17 +31,23 @@ export default async function Home() {
       <div className="p-6 max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Son Elanlar</h1>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ads?.map((ad) => (
-            <AdCard
-              key={ad.id}
-              ad={{
-                ...ad,
-                // Əgər car_images arrayi yoxdursa, boş array təyin et
-                car_images: ad.car_images || [],
-              }}
-              showControls={false}
-            />
-          ))}
+          {ads?.map((ad) => {
+            const isFavorite = user
+              ? ad.favorites.some((fav) => fav.user_id === user.id)
+              : false;
+
+            return (
+              <AdCard
+                key={ad.id}
+                ad={{
+                  ...ad,
+                  car_images: ad.car_images || [],
+                  is_favorite: isFavorite,
+                }}
+                showControls={false}
+              />
+            );
+          })}
         </div>
       </div>
     );

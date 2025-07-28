@@ -60,7 +60,7 @@ export default function AdCard({ ad, showControls = true, isProfile = false }) {
   return (
     <div
       onClick={handleCardClick}
-      className="border rounded cursor-pointer shadow p-3 flex flex-col transition duration-300 hover:scale-95"
+      className="border rounded cursor-pointer shadow p-3 flex flex-col transition hover:shadow-lg hover:border-blue-300"
     >
       <div className="relative h-48 w-full mb-2">
         <Image
