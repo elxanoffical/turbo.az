@@ -1,14 +1,11 @@
-"use client"
+"use client";
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabaseClient";
+import FavoriteButton from "@/components/FavoriteButton"; // Əgər component yolundadırsa
 
-export default function AdCard({ 
-  ad, 
-  showControls = true, 
-  isProfile = false 
-}) {
+export default function AdCard({ ad, showControls = true, isProfile = false }) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -39,8 +36,8 @@ export default function AdCard({
           .eq("car_ad_id", ad.id);
 
         if (images?.length > 0) {
-          const filesToDelete = images.map(img => 
-            img.image_url.split('/').pop()
+          const filesToDelete = images.map((img) =>
+            img.image_url.split("/").pop()
           );
           await supabase.storage.from("car-images").remove(filesToDelete);
         }
@@ -67,20 +64,31 @@ export default function AdCard({
     >
       <div className="relative h-48 w-full mb-2">
         <Image
-          src={ad.main_image_url || ad.car_images[0]?.image_url || "/placeholder.png"}
+          src={
+            ad.main_image_url ||
+            ad.car_images[0]?.image_url ||
+            "/placeholder.png"
+          }
           alt={`${ad.brand} ${ad.model}`}
           fill
           className="object-cover rounded"
           priority={false}
         />
+        <div className="absolute top-2 right-2 z-10">
+          <FavoriteButton adId={ad.id} initialFavorite={ad.is_favorite} />
+        </div>
       </div>
-      
-      <h2 className="text-lg font-bold">{ad.brand} {ad.model}</h2>
-      <p className="text-gray-600">{ad.year} · {ad.price} AZN</p>
+
+      <h2 className="text-lg font-bold">
+        {ad.brand} {ad.model}
+      </h2>
+      <p className="text-gray-600">
+        {ad.year} · {ad.price} AZN
+      </p>
       <p className="text-sm text-gray-500 mb-2">{ad.city}</p>
 
       {showControls && isProfile && (
-        <div 
+        <div
           className="mt-auto flex justify-between gap-2"
           onClick={(e) => e.stopPropagation()}
         >
