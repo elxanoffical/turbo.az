@@ -2,6 +2,7 @@ import { createServerClient } from "@/lib/supabaseServer";
 import { cookies } from "next/headers";
 import AdCard from "@/components/AdCard";
 import FilterBar from "@/components/FilterBar";
+import Hero from "@/components/Hero";
 
 export default async function Home({ searchParams }) {
   const cookieStore = cookies();
@@ -84,40 +85,45 @@ export default async function Home({ searchParams }) {
         : "Son Elanlar";
 
     return (
-      <div className="p-6 max-w-6xl mx-auto">
-        <FilterBar searchParams={searchParams} />
-        <h1 className="text-3xl font-bold mb-6">{dynamicTitle}</h1>
-        {ads?.length === 0 ? (
-          <p className="text-gray-600">Heç bir elan tapılmadı.</p>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ads.map((ad) => {
-              const isFavorite = user
-                ? ad.favorites.some((fav) => fav.user_id === user.id)
-                : false;
+      <>
+        <Hero />
+        <div className="p-6 max-w-6xl mx-auto">
+          <FilterBar searchParams={searchParams} />
+          <h1 className="text-3xl font-bold mb-6">{dynamicTitle}</h1>
+          {ads?.length === 0 ? (
+            <p className="text-gray-600">Heç bir elan tapılmadı.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+              {ads.map((ad) => {
+                const isFavorite = user
+                  ? ad.favorites.some((fav) => fav.user_id === user.id)
+                  : false;
 
-              return (
-                <AdCard
-                  key={ad.id}
-                  ad={{
-                    ...ad,
-                    car_images: ad.car_images || [],
-                    is_favorite: isFavorite,
-                  }}
-                  showControls={false}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
+                return (
+                  <AdCard
+                    key={ad.id}
+                    ad={{
+                      ...ad,
+                      car_images: ad.car_images || [],
+                      is_favorite: isFavorite,
+                    }}
+                    showControls={false}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </>
     );
   } catch (error) {
     console.error("Error:", error);
     return (
       <div className="p-6 max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Xəta baş verdi</h1>
-        <p className="text-red-500">Zəhmət olmasa daha sonra yenidən cəhd edin</p>
+        <p className="text-red-500">
+          Zəhmət olmasa daha sonra yenidən cəhd edin
+        </p>
       </div>
     );
   }
