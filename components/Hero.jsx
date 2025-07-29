@@ -3,7 +3,7 @@ import React from "react";
 
 export default function Hero() {
   return (
-    <div className="relative w-screen h-screen overflow-hidden">
+    <div className="relative w-full h-screen overflow-hidden">
       <iframe
         className="absolute top-0 left-0 w-full h-full pointer-events-none"
         src="https://www.youtube.com/embed/OUPQGEwO6hA?autoplay=1&mute=1&controls=0&loop=1&playlist=OUPQGEwO6hA&modestbranding=1&showinfo=0&rel=0"
