@@ -3,13 +3,32 @@
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabaseClient";
-import FavoriteButton from "@/components/FavoriteButton"; // Əgər component yolundadırsa
+import FavoriteButton from "@/components/FavoriteButton";
+import { format } from "date-fns";
+import { az } from "date-fns/locale";
+import { useEffect, useState } from "react";
 
 export default function AdCard({ ad, showControls = true, isProfile = false }) {
   const router = useRouter();
   const supabase = createClient();
+  const [formattedDate, setFormattedDate] = useState("");
+  const [formattedPrice, setFormattedPrice] = useState("");
 
-  // Klik hadisəsi idarəçisi
+  useEffect(() => {
+    if (ad.created_at) {
+      setFormattedDate(
+        format(new Date(ad.created_at), "d MMMM yyyy, HH:mm", { locale: az })
+      );
+    }
+  }, [ad.created_at]);
+
+  useEffect(() => {
+    if (ad.price !== undefined) {
+      setFormattedPrice(
+        new Intl.NumberFormat("az-AZ").format(Number(ad.price))
+      );
+    }
+  }, [ad.price]);
   const handleCardClick = () => {
     if (isProfile) {
       router.push(`/profile/${ad.id}`);
@@ -18,18 +37,15 @@ export default function AdCard({ ad, showControls = true, isProfile = false }) {
     }
   };
 
-  // Redaktə et
   const handleEdit = (e) => {
     e.stopPropagation();
     router.push(`/profile/edit/${ad.id}`);
   };
 
-  // Sil
   const handleDelete = async (e) => {
     e.stopPropagation();
     if (confirm("Bu elanı silmək istədiyinizə əminsiniz?")) {
       try {
-        // Şəkilləri sil
         const { data: images } = await supabase
           .from("car_images")
           .select("image_url")
@@ -42,7 +58,6 @@ export default function AdCard({ ad, showControls = true, isProfile = false }) {
           await supabase.storage.from("car-images").remove(filesToDelete);
         }
 
-        // Elanı sil
         const { error } = await supabase
           .from("car_ads")
           .delete()
@@ -60,52 +75,59 @@ export default function AdCard({ ad, showControls = true, isProfile = false }) {
   return (
     <div
       onClick={handleCardClick}
-      className="border rounded cursor-pointer shadow p-3 flex flex-col transition hover:shadow-lg hover:border-blue-300"
+      className="w-full bg-white rounded-2xl overflow-hidden shadow hover:shadow-lg transition cursor-pointer border border-gray-200"
     >
-      <div className="relative h-48 w-full mb-2">
+      <div className="relative w-full h-56">
         <Image
           src={
             ad.main_image_url ||
-            ad.car_images[0]?.image_url ||
+            ad.car_images?.[0]?.image_url ||
             "/placeholder.png"
           }
           alt={`${ad.brand} ${ad.model}`}
           fill
-          className="object-cover rounded"
-          priority={false}
+          className="object-cover"
         />
+
         <div className="absolute top-2 right-2 z-10">
           <FavoriteButton adId={ad.id} initialFavorite={ad.is_favorite} />
         </div>
       </div>
 
-      <h2 className="text-lg font-bold">
-        {ad.brand} {ad.model}
-      </h2>
-      <p className="text-gray-600">
-        {ad.year} · {ad.price} AZN
-      </p>
-      <p className="text-sm text-gray-500 mb-2">{ad.city}</p>
+      <div className="p-3">
+        <p className="text-lg font-semibold text-[#00272b]">
+          {formattedPrice ? formattedPrice : "..."} AZN
+        </p>
+        <p className="text-sm text-gray-700 mt-1">
+          {ad.brand} {ad.model}
+        </p>
+        <p className="text-xs text-gray-500">
+          {ad.year}, {ad.engine_size} L, {ad.mileage} km
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          {ad.city}, {formattedDate}
+        </p>
 
-      {showControls && isProfile && (
-        <div
-          className="mt-auto flex justify-between gap-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={handleEdit}
-            className="text-blue-600 border border-blue-600 px-3 py-1 rounded hover:bg-blue-50 text-sm"
+        {showControls && isProfile && (
+          <div
+            className="mt-4 flex justify-between gap-2"
+            onClick={(e) => e.stopPropagation()}
           >
-            Redaktə
-          </button>
-          <button
-            onClick={handleDelete}
-            className="text-red-600 border border-red-600 px-3 py-1 rounded hover:bg-red-50 text-sm"
-          >
-            Sil
-          </button>
-        </div>
-      )}
+            <button
+              onClick={handleEdit}
+              className="text-[#00272b] border border-[#00272b] px-4 py-1 rounded hover:bg-[#e0FF4F] hover:text-black text-sm"
+            >
+              Redaktə
+            </button>
+            <button
+              onClick={handleDelete}
+              className="text-red-600 border border-red-600 px-4 py-1 rounded hover:bg-red-100 text-sm"
+            >
+              Sil
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

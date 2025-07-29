@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabaseClient";
-import { FaHeart, FaRegHeart } from "react-icons/fa";
+import { FaHeart, FaRegHeart } from "react-icons/fa"; 
 
 export default function FavoriteButton({ adId, initialFavorite }) {
   const supabase = createClient();
@@ -13,7 +13,6 @@ export default function FavoriteButton({ adId, initialFavorite }) {
     if (!user) return alert("Giriş etməlisiniz!");
 
     if (isFavorite) {
-      // Favoritdən çıxar
       await supabase
         .from("favorites")
         .delete()
@@ -21,7 +20,6 @@ export default function FavoriteButton({ adId, initialFavorite }) {
         .eq("car_ad_id", adId);
       setIsFavorite(false);
     } else {
-      // Favoritə əlavə et
       await supabase
         .from("favorites")
         .insert([{ user_id: user.id, car_ad_id: adId }]);
@@ -33,7 +31,11 @@ export default function FavoriteButton({ adId, initialFavorite }) {
     <button
       onClick={toggleFavorite}
       aria-label="Favoritə əlavə et"
-      className="text-xl text-red-600 cursor-pointer"
+      className={`p-2 rounded-full border-2 ${
+        isFavorite
+          ? "bg-white text-red-600 border-red-500"
+          : "bg-white text-gray-400 border-white"
+      } hover:text-red-500 transition cursor-pointer`}
     >
       {isFavorite ? <FaHeart /> : <FaRegHeart />}
     </button>

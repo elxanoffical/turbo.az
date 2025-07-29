@@ -80,13 +80,14 @@ export default function FilterBar({ searchParams }) {
   const modelOptions = brandModelOptions[filters.brand] || [];
 
   return (
-    <div className="bg-gray-100 p-4 rounded-lg mb-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="bg-[#00272b] text-white p-5 rounded-2xl shadow-lg mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Marka */}
         <select
           name="brand"
           value={filters.brand}
           onChange={handleChange}
-          className="p-2 border rounded"
+          className="bg-[#001f24] text-white p-3 rounded-lg border border-[#e0FF4F] focus:outline-none"
         >
           <option value="">Marka</option>
           {Object.keys(brandModelOptions).map((brand) => (
@@ -96,12 +97,13 @@ export default function FilterBar({ searchParams }) {
           ))}
         </select>
 
+        {/* Model */}
         <select
           name="model"
           value={filters.model}
           onChange={handleChange}
           disabled={!filters.brand}
-          className="p-2 border rounded"
+          className="bg-[#001f24] text-white p-3 rounded-lg border border-[#e0FF4F] focus:outline-none disabled:opacity-50"
         >
           <option value="">Model</option>
           {modelOptions.map((model) => (
@@ -111,55 +113,61 @@ export default function FilterBar({ searchParams }) {
           ))}
         </select>
 
+        {/* Şəhər */}
         <input
           name="city"
           placeholder="Şəhər"
           value={filters.city}
           onChange={handleChange}
-          className="p-2 border rounded"
+          className="bg-[#001f24] text-white p-3 rounded-lg border border-[#e0FF4F] placeholder:text-gray-400 focus:outline-none"
         />
 
+        {/* Yeni/Sürülmüş */}
         <select
           name="new"
           value={filters.new}
           onChange={handleChange}
-          className="p-2 border rounded"
+          className="bg-[#001f24] text-white p-3 rounded-lg border border-[#e0FF4F] focus:outline-none"
         >
-          <option value="">Hamısı</option>
+          <option value="">Yeni / Sürülmüş</option>
           <option value="true">Yeni</option>
           <option value="false">Sürülmüş</option>
         </select>
 
+        {/* Qiymət */}
         <input
           name="price_min"
           placeholder="Qiymət, min"
           value={filters.price_min}
           onChange={handleChange}
-          className="p-2 border rounded"
+          className="bg-[#001f24] text-white p-3 rounded-lg border border-[#e0FF4F] placeholder:text-gray-400"
         />
         <input
           name="price_max"
           placeholder="maks."
           value={filters.price_max}
           onChange={handleChange}
-          className="p-2 border rounded"
+          className="bg-[#001f24] text-white p-3 rounded-lg border border-[#e0FF4F] placeholder:text-gray-400"
         />
 
+        {/* Barter */}
         <label className="flex items-center space-x-2">
           <input
             type="checkbox"
             name="barter"
             checked={filters.barter}
             onChange={handleChange}
+            className="accent-[#e0FF4F]"
           />
           <span>Barter</span>
         </label>
 
+        {/* Ban növü */}
         <select
           name="body"
           value={filters.body}
           onChange={handleChange}
-          className="p-2 border rounded"
+          className="bg-[#001f24] text-white p-3 rounded-lg border border-[#e0FF4F] focus:outline-none"
         >
           <option value="">Ban növü</option>
           <option value="Sedan">Sedan</option>
@@ -170,116 +178,68 @@ export default function FilterBar({ searchParams }) {
           <option value="Pikap">Pikap</option>
         </select>
 
+        {/* Daha çox filtrelər (Əgər açılıbsa) */}
         {expanded && (
-          <>
-            <input
-              name="year_min"
-              placeholder="İl, min"
-              value={filters.year_min}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="year_max"
-              placeholder="maks."
-              value={filters.year_max}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="mileage_min"
-              placeholder="Yürüş, min"
-              value={filters.mileage_min}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="mileage_max"
-              placeholder="maks."
-              value={filters.mileage_max}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="engine"
-              placeholder="Mühərrik (məs. 2.0)"
-              value={filters.engine}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="color"
-              placeholder="Rəng"
-              value={filters.color}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="fuel"
-              placeholder="Yanacaq"
-              value={filters.fuel}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="transmission"
-              placeholder="Sürətlər qutusu"
-              value={filters.transmission}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="drive"
-              placeholder="Ötürücü (məs. Arxa)"
-              value={filters.drive}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="owners"
-              placeholder="Sahiblər sayı"
-              value={filters.owners}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="seats"
-              placeholder="Oturacaq sayı"
-              value={filters.seats}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="condition"
-              placeholder="Vəziyyət"
-              value={filters.condition}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-            <input
-              name="market"
-              placeholder="Bazar (məs. Avropa)"
-              value={filters.market}
-              onChange={handleChange}
-              className="p-2 border rounded"
-            />
-          </>
+          <div className="col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+            {[
+              "year_min",
+              "year_max",
+              "mileage_min",
+              "mileage_max",
+              "engine",
+              "color",
+              "fuel",
+              "transmission",
+              "drive",
+              "owners",
+              "seats",
+              "condition",
+              "market",
+            ].map((name) => (
+              <input
+                key={name}
+                name={name}
+                placeholder={name
+                  .replace("min", "min.")
+                  .replace("max", "maks.")
+                  .replace("_", " ")
+                  .replace("year", "İl")
+                  .replace("mileage", "Yürüş")
+                  .replace("engine", "Mühərrik")
+                  .replace("color", "Rəng")
+                  .replace("fuel", "Yanacaq")
+                  .replace("transmission", "Sürət qutusu")
+                  .replace("drive", "Ötürücü")
+                  .replace("owners", "Sahiblər")
+                  .replace("seats", "Oturacaq sayı")
+                  .replace("condition", "Vəziyyəti")
+                  .replace("market", "Bazar növü")}
+                value={filters[name]}
+                onChange={handleChange}
+                className="bg-[#001f24] text-white p-3 rounded-lg border border-[#e0FF4F] placeholder:text-gray-400 focus:outline-none"
+              />
+            ))}
+          </div>
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-3">
+      {/* Aşağıdakı düymələr */}
+      <div className="mt-6 flex flex-wrap gap-4">
         <button
           onClick={handleSubmit}
-          className="bg-red-600 text-white px-4 py-2 rounded"
+          className="bg-[#e0FF4F] text-[#00272b] font-bold px-6 py-2 rounded-lg hover:bg-yellow-300 transition"
         >
           Elanları göstər
         </button>
-        <button onClick={handleReset} className="text-gray-700 underline">
+        <button
+          onClick={handleReset}
+          className="text-white underline hover:text-yellow-300"
+        >
           Sıfırla
         </button>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-blue-600 underline"
+          className="text-white underline hover:text-yellow-300"
         >
           {expanded ? "Daha az filter" : "Daha çox filter"}
         </button>
