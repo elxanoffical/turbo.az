@@ -1,45 +1,115 @@
-'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabaseClient';
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabaseClient";
+import { useForm } from "react-hook-form";
 
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    const { error } = await supabase.auth.signUp(form);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+
+  const onSubmit = async (data) => {
+    setError(null);
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+    });
+    setLoading(false);
     if (error) {
       setError(error.message);
     } else {
-      router.push('/login');
+      router.push("/login");
     }
   };
 
   return (
-    <form onSubmit={handleSignup} className="p-4 max-w-md mx-auto">
-      <h2 className="text-xl mb-4">Qeydiyyat</h2>
-      {error && <p className="text-red-500 mb-2">{error}</p>}
-      <input
-        type="email"
-        placeholder="Email"
-        value={form.email}
-        onChange={(e) => setForm({ ...form, email: e.target.value })}
-        className="border p-2 w-full mb-2"
-      />
-      <input
-        type="password"
-        placeholder="Şifrə"
-        value={form.password}
-        onChange={(e) => setForm({ ...form, password: e.target.value })}
-        className="border p-2 w-full mb-4"
-      />
-      <button type="submit" className="bg-green-600 text-white px-4 py-2 w-full">
-        Qeydiyyatdan keç
-      </button>
-    </form>
+    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
+      <h2 className="text-2xl font-semibold mb-6 text-[#00272b]">Qeydiyyat</h2>
+      {error && (
+        <p className="bg-red-100 text-red-700 p-2 rounded mb-4">{error}</p>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+        <label className="block mb-1 font-medium text-[#00272b]">
+          Email
+          <input
+            type="email"
+            placeholder="Email daxil edin"
+            {...register("email", {
+              required: "Email tələb olunur",
+              pattern: {
+                value:
+                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                message: "Düzgün email formatı daxil edin",
+              },
+            })}
+            className={`w-full p-2 border rounded ${
+              errors.email ? "border-red-500" : "border-gray-300"
+            } mt-1 mb-2 focus:outline-none focus:ring-2 focus:ring-[#e0FF4F]`}
+          />
+          {errors.email && (
+            <p className="text-red-500 text-sm mt-0.5">{errors.email.message}</p>
+          )}
+        </label>
+
+        <label className="block mb-4 font-medium text-[#00272b] relative">
+          Şifrə
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Şifrənizi daxil edin"
+            {...register("password", {
+              required: "Şifrə tələb olunur",
+              minLength: {
+                value: 6,
+                message: "Şifrə ən az 6 simvol olmalıdır",
+              },
+            })}
+            className={`w-full p-2 border rounded ${
+              errors.password ? "border-red-500" : "border-gray-300"
+            } mt-1 pr-10 mb-2 focus:outline-none focus:ring-2 focus:ring-[#e0FF4F]`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-2 top-[38px] text-gray-500 hover:text-gray-700"
+            tabIndex={-1}
+          >
+            {showPassword ? "Gizlə" : "Göstər"}
+          </button>
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-0.5">{errors.password.message}</p>
+          )}
+        </label>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-[#00272b] text-[#e0FF4F] py-2 rounded font-semibold hover:bg-[#004b48] transition disabled:opacity-50"
+        >
+          {loading ? "Yüklənir..." : "Qeydiyyatdan keç"}
+        </button>
+      </form>
+
+      <p className="mt-4 text-center text-gray-600">
+        Hesabınız var?
+        <a
+          href="/login"
+          className="ml-1 text-[#00272b] font-semibold hover:underline"
+        >
+          Daxil olun
+        </a>
+      </p>
+    </div>
   );
 }
