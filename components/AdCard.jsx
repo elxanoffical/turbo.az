@@ -75,7 +75,7 @@ export default function AdCard({ ad, showControls = true, isProfile = false }) {
   return (
     <div
       onClick={handleCardClick}
-      className="w-full bg-white rounded-2xl overflow-hidden shadow hover:shadow-lg transition cursor-pointer border border-gray-200"
+      className="w-full bg-white rounded-2xl overflow-hidden shadow hover:shadow-lg transition cursor-pointer border border-[#e0FF4F]"
     >
       <div className="relative w-full h-56">
         <Image
