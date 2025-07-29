@@ -1,12 +1,21 @@
-// components/FilterBar.jsx
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
-export default function FilterBar() {
+const brandModelOptions = {
+  BMW: ["X5", "X6", "M5"],
+  Mercedes: ["E-Class", "C-Class", "GLA"],
+  Audi: ["A4", "A6", "Q7"],
+  Hyundai: ["Elantra", "Sonata"],
+  Kia: ["Sportage", "Optima"],
+  Toyota: ["Camry", "Corolla"],
+  Lexus: ["RX", "NX"],
+  Chevrolet: ["Cruze", "Malibu"],
+};
+
+export default function FilterBar({ searchParams }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [expanded, setExpanded] = useState(false);
 
   const [filters, setFilters] = useState({
@@ -17,16 +26,27 @@ export default function FilterBar() {
     price_max: "",
     year_min: "",
     year_max: "",
+    mileage_min: "",
+    mileage_max: "",
+    engine: "",
+    color: "",
+    fuel: "",
+    transmission: "",
+    drive: "",
     new: "",
     barter: false,
-    credit: false, // gələcəkdə əlavə oluna bilər
+    owners: "",
+    seats: "",
+    condition: "",
+    market: "",
     body: "",
   });
 
+  // ✅ SSR searchParams obyektinə uyğunlaşdırılmış versiya
   useEffect(() => {
     const newFilters = {};
-    for (const [key, value] of searchParams.entries()) {
-      newFilters[key] = value;
+    for (const key in searchParams) {
+      newFilters[key] = searchParams[key];
     }
     setFilters((prev) => ({ ...prev, ...newFilters }));
   }, [searchParams]);
@@ -49,39 +69,48 @@ export default function FilterBar() {
   };
 
   const handleReset = () => {
-    setFilters({
-      brand: "",
-      model: "",
-      city: "",
-      price_min: "",
-      price_max: "",
-      year_min: "",
-      year_max: "",
-      new: "",
-      barter: false,
-      credit: false,
-      body: "",
-    });
+    const resetState = {};
+    for (const key in filters) {
+      resetState[key] = typeof filters[key] === "boolean" ? false : "";
+    }
+    setFilters(resetState);
     router.push("/");
   };
+
+  const modelOptions = brandModelOptions[filters.brand] || [];
 
   return (
     <div className="bg-gray-100 p-4 rounded-lg mb-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <input
+        <select
           name="brand"
-          placeholder="Marka"
           value={filters.brand}
           onChange={handleChange}
           className="p-2 border rounded"
-        />
-        <input
+        >
+          <option value="">Marka</option>
+          {Object.keys(brandModelOptions).map((brand) => (
+            <option key={brand} value={brand}>
+              {brand}
+            </option>
+          ))}
+        </select>
+
+        <select
           name="model"
-          placeholder="Model"
           value={filters.model}
           onChange={handleChange}
+          disabled={!filters.brand}
           className="p-2 border rounded"
-        />
+        >
+          <option value="">Model</option>
+          {modelOptions.map((model) => (
+            <option key={model} value={model}>
+              {model}
+            </option>
+          ))}
+        </select>
+
         <input
           name="city"
           placeholder="Şəhər"
@@ -89,6 +118,7 @@ export default function FilterBar() {
           onChange={handleChange}
           className="p-2 border rounded"
         />
+
         <select
           name="new"
           value={filters.new}
@@ -114,6 +144,7 @@ export default function FilterBar() {
           onChange={handleChange}
           className="p-2 border rounded"
         />
+
         <label className="flex items-center space-x-2">
           <input
             type="checkbox"
@@ -134,7 +165,9 @@ export default function FilterBar() {
           <option value="Sedan">Sedan</option>
           <option value="SUV">SUV</option>
           <option value="Hetçbek">Hetçbek</option>
-          {/* digər ban növləri */}
+          <option value="Kupe">Kupe</option>
+          <option value="Universal">Universal</option>
+          <option value="Pikap">Pikap</option>
         </select>
 
         {expanded && (
@@ -153,18 +186,101 @@ export default function FilterBar() {
               onChange={handleChange}
               className="p-2 border rounded"
             />
+            <input
+              name="mileage_min"
+              placeholder="Yürüş, min"
+              value={filters.mileage_min}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="mileage_max"
+              placeholder="maks."
+              value={filters.mileage_max}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="engine"
+              placeholder="Mühərrik (məs. 2.0)"
+              value={filters.engine}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="color"
+              placeholder="Rəng"
+              value={filters.color}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="fuel"
+              placeholder="Yanacaq"
+              value={filters.fuel}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="transmission"
+              placeholder="Sürətlər qutusu"
+              value={filters.transmission}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="drive"
+              placeholder="Ötürücü (məs. Arxa)"
+              value={filters.drive}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="owners"
+              placeholder="Sahiblər sayı"
+              value={filters.owners}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="seats"
+              placeholder="Oturacaq sayı"
+              value={filters.seats}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="condition"
+              placeholder="Vəziyyət"
+              value={filters.condition}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
+            <input
+              name="market"
+              placeholder="Bazar (məs. Avropa)"
+              value={filters.market}
+              onChange={handleChange}
+              className="p-2 border rounded"
+            />
           </>
         )}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
-        <button onClick={handleSubmit} className="bg-red-600 text-white px-4 py-2 rounded">
+        <button
+          onClick={handleSubmit}
+          className="bg-red-600 text-white px-4 py-2 rounded"
+        >
           Elanları göstər
         </button>
         <button onClick={handleReset} className="text-gray-700 underline">
           Sıfırla
         </button>
-        <button onClick={() => setExpanded(!expanded)} className="text-blue-600 underline">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-blue-600 underline"
+        >
           {expanded ? "Daha az filter" : "Daha çox filter"}
         </button>
       </div>

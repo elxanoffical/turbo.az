@@ -23,7 +23,6 @@ export default async function Home({ searchParams }) {
       )
       .eq("is_public", true);
 
-    // Filters from query params
     const {
       brand,
       model,
@@ -35,6 +34,17 @@ export default async function Home({ searchParams }) {
       price_max,
       year_min,
       year_max,
+      mileage_min,
+      mileage_max,
+      engine,
+      color,
+      fuel,
+      transmission,
+      drive,
+      owners,
+      seats,
+      condition,
+      market,
     } = searchParams;
 
     if (brand) query.ilike("brand", `%${brand}%`);
@@ -48,6 +58,17 @@ export default async function Home({ searchParams }) {
     if (price_max) query.lte("price", Number(price_max));
     if (year_min) query.gte("year", Number(year_min));
     if (year_max) query.lte("year", Number(year_max));
+    if (mileage_min) query.gte("mileage", Number(mileage_min));
+    if (mileage_max) query.lte("mileage", Number(mileage_max));
+    if (engine) query.ilike("engine", `%${engine}%`);
+    if (color) query.ilike("color", `%${color}%`);
+    if (fuel) query.ilike("fuel", `%${fuel}%`);
+    if (transmission) query.ilike("transmission", `%${transmission}%`);
+    if (drive) query.ilike("drive", `%${drive}%`);
+    if (owners) query.eq("owners", owners);
+    if (seats) query.eq("seats", seats);
+    if (condition) query.ilike("condition", `%${condition}%`);
+    if (market) query.ilike("market", `%${market}%`);
 
     const { data: ads, error } = await query.order("created_at", {
       ascending: false,
@@ -55,29 +76,40 @@ export default async function Home({ searchParams }) {
 
     if (error) throw error;
 
+    const dynamicTitle =
+      brand && model
+        ? `${brand} ${model} elanları`
+        : brand
+        ? `${brand} elanları`
+        : "Son Elanlar";
+
     return (
       <div className="p-6 max-w-6xl mx-auto">
-        <FilterBar />
-        <h1 className="text-3xl font-bold mb-6">Son Elanlar</h1>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ads?.map((ad) => {
-            const isFavorite = user
-              ? ad.favorites.some((fav) => fav.user_id === user.id)
-              : false;
+        <FilterBar searchParams={searchParams} />
+        <h1 className="text-3xl font-bold mb-6">{dynamicTitle}</h1>
+        {ads?.length === 0 ? (
+          <p className="text-gray-600">Heç bir elan tapılmadı.</p>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ads.map((ad) => {
+              const isFavorite = user
+                ? ad.favorites.some((fav) => fav.user_id === user.id)
+                : false;
 
-            return (
-              <AdCard
-                key={ad.id}
-                ad={{
-                  ...ad,
-                  car_images: ad.car_images || [],
-                  is_favorite: isFavorite,
-                }}
-                showControls={false}
-              />
-            );
-          })}
-        </div>
+              return (
+                <AdCard
+                  key={ad.id}
+                  ad={{
+                    ...ad,
+                    car_images: ad.car_images || [],
+                    is_favorite: isFavorite,
+                  }}
+                  showControls={false}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   } catch (error) {
