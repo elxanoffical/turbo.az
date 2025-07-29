@@ -16,6 +16,10 @@ const formOptions = {
   drives: ["Arxa", "Ön", "Tam"],
   markets: ["Avropa", "Amerika", "Yaponiya"],
   colors: ["Qara", "Ağ", "Boz", "Qırmızı"],
+  booleanOptions: [
+    { label: "Bəli", value: "true" },
+    { label: "Xeyr", value: "false" },
+  ],
 };
 
 export default function AddAdPage() {
@@ -29,7 +33,6 @@ export default function AddAdPage() {
     formState: { errors },
   } = useForm();
 
-  // Auth yoxlaması
   useEffect(() => {
     const checkAuth = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -38,7 +41,7 @@ export default function AddAdPage() {
       }
     };
     checkAuth();
-  }, []);
+  }, [router, supabase]);
 
   const uploadImages = async (adId) => {
     const uploadResults = [];
@@ -46,40 +49,25 @@ export default function AddAdPage() {
     for (const [index, file] of images.entries()) {
       try {
         const fileName = `${Date.now()}_${file.name}`;
-
-        // Şəkil yüklə
         const { error: uploadError } = await supabase.storage
           .from("car-images")
           .upload(fileName, file);
 
-        if (uploadError) {
-          console.error("Upload error:", uploadError);
-          throw uploadError;
-        }
+        if (uploadError) throw uploadError;
 
-        // Public URL al
-        const { data } = supabase.storage
-          .from("car-images")
-          .getPublicUrl(fileName);
+        const { data } = supabase.storage.from("car-images").getPublicUrl(fileName);
         const publicUrl = data.publicUrl;
 
         if (!publicUrl) throw new Error("Şəkil üçün public URL tapılmadı");
 
-        // Verilənlər bazasına yaz
         const { error: insertError } = await supabase
           .from("car_images")
-          .insert([
-            {
-              car_ad_id: adId,
-              image_url: publicUrl,
-            },
-          ]);
+          .insert([{ car_ad_id: adId, image_url: publicUrl }]);
 
         if (insertError) throw insertError;
 
         uploadResults.push({ success: true, url: publicUrl });
 
-        // Əgər ilk şəkildirsə, əsas şəkil kimi təyin et
         if (index === 0) {
           const { error: updateError } = await supabase
             .from("car_ads")
@@ -89,7 +77,6 @@ export default function AddAdPage() {
           if (updateError) throw updateError;
         }
       } catch (error) {
-        console.error(`Şəkil ${index + 1} xətası:`, error);
         uploadResults.push({
           success: false,
           error: `Şəkil ${index + 1} xətası: ${error.message}`,
@@ -102,16 +89,14 @@ export default function AddAdPage() {
 
   const onSubmit = async (formData) => {
     setStatus({ loading: true, error: null });
-
     try {
-      // 1. İstifadəçi yoxlaması
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
+
       if (userError || !user) throw new Error("Giriş etməmisiniz");
 
-      // 2. Əsas elan məlumatlarını yarat
       const { data: ad, error: adError } = await supabase
         .from("car_ads")
         .insert([
@@ -131,24 +116,19 @@ export default function AddAdPage() {
 
       if (adError) throw adError;
 
-      // 3. Şəkilləri yüklə
       if (images.length > 0) {
         const uploadResults = await uploadImages(ad.id);
-        const failedUploads = uploadResults.filter((r) => !r.success);
-
-        if (failedUploads.length > 0) {
+        const failed = uploadResults.filter((r) => !r.success);
+        if (failed.length) {
           throw new Error(
-            `Bəzi şəkillər yüklənmədi:\n${failedUploads
-              .map((u) => u.error)
-              .join("\n")}`
+            `Bəzi şəkillər yüklənmədi:\n${failed.map((f) => f.error).join("\n")}`
           );
         }
       }
 
-      // 4. Uğurlu olduqda profilə yönləndir
       setStatus({ loading: false, error: null });
       router.push("/profile");
-      router.refresh(); // Əlavə etdik - səhifəni yenilə
+      router.refresh();
     } catch (error) {
       setStatus({ loading: false, error: error.message });
     }
@@ -161,7 +141,7 @@ export default function AddAdPage() {
       {status.error && (
         <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
           <p className="font-medium">Xəta baş verdi:</p>
-          <p className="mt-1">{status.error}</p>
+          <p className="mt-1 whitespace-pre-line">{status.error}</p>
         </div>
       )}
 
@@ -284,26 +264,23 @@ export default function AddAdPage() {
             register={register}
             name="new"
             label="Yeni?"
-            options={["true", "false"]}
+            options={formOptions.booleanOptions}
             error={errors.new}
           />
           <FormSelect
             register={register}
             name="barter"
             label="Barter mümkündür?"
-            options={["true", "false"]}
+            options={formOptions.booleanOptions}
             error={errors.barter}
           />
         </div>
 
         <div>
-          <label className="block mb-2 font-medium">
-            Şəkillər (Maksimum 10)
-          </label>
+          <label className="block mb-2 font-medium">Şəkillər (Maksimum 10)</label>
           <ImageUploader onChange={setImages} maxFiles={10} />
           <p className="mt-1 text-sm text-gray-500">
-            Ən azı 1 şəkil əlavə edin (ilk şəkil əsas şəkil kimi istifadə
-            olunacaq)
+            Ən azı 1 şəkil əlavə edin (ilk şəkil əsas şəkil kimi istifadə olunacaq)
           </p>
         </div>
 

@@ -18,7 +18,6 @@ export default function AdDetailClient({ ad, allImages }) {
     }
   };
 
-  // Köməkçi komponent texniki məlumatlar üçün
   const Info = ({ label, value }) => {
     if (!value) return null;
     return (
@@ -33,8 +32,11 @@ export default function AdDetailClient({ ad, allImages }) {
     <div className="max-w-4xl mx-auto p-6">
       {/* Geri düyməsi */}
       <div className="mb-4">
-        <Link href="/" className="text-[#e0FF4F] hover:underline flex items-center gap-1">
-          <FaChevronLeft /> Elanlara qayıt
+        <Link
+          href="/profile"
+          className="text-[#e0FF4F] hover:underline flex items-center gap-1"
+        >
+          <FaChevronLeft /> Profilə qayıt
         </Link>
       </div>
 
@@ -84,7 +86,9 @@ export default function AdDetailClient({ ad, allImages }) {
         <h1 className="text-3xl font-bold mb-2 text-[#00272b]">
           {ad.brand} {ad.model} ({ad.year})
         </h1>
-        <p className="text-2xl text-[#e0FF4F] font-semibold mb-4">{ad.price} AZN</p>
+        <p className="text-2xl text-[#e0FF4F] font-semibold mb-4">
+          {ad.price} AZN
+        </p>
         <p className="text-gray-600 mt-1">{ad.city}</p>
       </div>
 
@@ -107,7 +111,9 @@ export default function AdDetailClient({ ad, allImages }) {
       {/* Ətraflı məlumat */}
       {ad.description && (
         <div className="mt-8 bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold mb-4 text-[#00272b]">Ətraflı məlumat</h2>
+          <h2 className="text-xl font-semibold mb-4 text-[#00272b]">
+            Ətraflı məlumat
+          </h2>
           <p className="whitespace-pre-line text-gray-800">{ad.description}</p>
         </div>
       )}
