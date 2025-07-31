@@ -1,12 +1,16 @@
+"use client";
+
 import { useState } from "react";
-import { createClient } from "@/lib/supabaseClient";
-import { FaHeart, FaRegHeart } from "react-icons/fa"; 
+import { createClient } from "@/lib/supabaseClient"; // <- buranı əlavə et
+import { FaHeart, FaRegHeart } from "react-icons/fa";
 
 export default function FavoriteButton({ adId, initialFavorite }) {
   const supabase = createClient();
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
 
-  const toggleFavorite = async () => {
+  const toggleFavorite = async (event) => {
+    event.stopPropagation(); // klikin parent elementə yayılmasının qarşısını alır
+
     const {
       data: { user },
     } = await supabase.auth.getUser();

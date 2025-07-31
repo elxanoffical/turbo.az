@@ -227,19 +227,19 @@ export default function FilterBar({ searchParams }) {
       <div className="mt-6 flex flex-wrap gap-4">
         <button
           onClick={handleSubmit}
-          className="bg-[#e0FF4F] text-[#00272b] font-bold px-6 py-2 rounded-lg hover:bg-yellow-300 transition"
+          className="bg-[#e0FF4F] cursor-pointer text-[#00272b] font-bold px-6 py-2 rounded-lg hover:bg-yellow-300 transition"
         >
           Elanları göstər
         </button>
         <button
           onClick={handleReset}
-          className="text-white underline hover:text-yellow-300"
+          className="text-white cursor-pointer underline hover:text-yellow-300"
         >
           Sıfırla
         </button>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-white underline hover:text-yellow-300"
+          className="text-white underline cursor-pointer hover:text-yellow-300"
         >
           {expanded ? "Daha az filter" : "Daha çox filter"}
         </button>

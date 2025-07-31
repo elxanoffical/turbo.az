@@ -10,16 +10,21 @@ export default function FavoritesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchFavorites = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        if (isMounted) setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from("favorites")
         .select("car_ads(*)")
         .eq("user_id", user.id);
 
-      if (data) {
+      if (data && isMounted) {
         const carAds = data.map(fav => ({
           ...fav.car_ads,
           is_favorite: true,
@@ -27,23 +32,35 @@ export default function FavoritesPage() {
         setAds(carAds);
       }
 
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
     fetchFavorites();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  if (loading) return <p>Yüklənir...</p>;
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-gray-600">Yüklənir...</p>
+      </div>
+    );
+
+  if (!loading && ads.length === 0)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-gray-600">Favoritlər siyahınız boşdur.</p>
+      </div>
+    );
 
   return (
     <div className="p-4 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-      {ads.length === 0 ? (
-        <p>Favoritlər siyahınız boşdur.</p>
-      ) : (
-        ads.map(ad => (
-          <AdCard key={ad.id} ad={ad} showControls={false} />
-        ))
-      )}
+      {ads.map(ad => (
+        <AdCard key={ad.id} ad={ad} showControls={false} />
+      ))}
     </div>
   );
 }

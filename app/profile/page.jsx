@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
@@ -94,6 +95,26 @@ export default function ProfilePage() {
     router.push("/add");
   };
 
+  // Profilə yönləndirmə (admin / profile)
+  const handleProfileClick = () => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    // Role app_metadata-dən al
+    const role =
+      user?.user_metadata?.role ||
+      user?.app_metadata?.role ||
+      "user"; // default user
+
+    if (role === "admin") {
+      router.push("/admin");
+    } else {
+      router.push("/profile");
+    }
+  };
+
   if (!authChecked || data.loading) {
     return (
       <div className="flex justify-center items-center min-h-[300px]">
@@ -128,23 +149,37 @@ export default function ProfilePage() {
     <div className="container mx-auto p-6 max-w-7xl">
       {/* İstifadəçi məlumatları və logout */}
       <div className="flex flex-col sm:flex-row justify-between items-center bg-white shadow-md rounded-lg px-6 py-4 mb-10 border border-gray-200">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 cursor-pointer" onClick={handleProfileClick}>
           <FiUser className="text-[#00272b] w-10 h-10" />
           <div>
-            <p className="text-lg font-semibold text-[#00272b]">
-              {user.email}
+            <p className="text-lg font-semibold text-[#00272b]">{user.email}</p>
+            <p className="text-sm text-gray-500 select-text">
+              {user.user_metadata?.role || user.app_metadata?.role === "admin"
+                ? "Admin"
+                : "İstifadəçi"}
             </p>
-            <p className="text-sm text-gray-500 select-text">İstifadəçi</p>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center cursor-pointer gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded transition"
-          aria-label="Çıxış et"
-        >
-          <FiLogOut size={20} />
-          Çıxış
-        </button>
+
+        <div className="flex gap-3 mt-4 sm:mt-0">
+          {(user.user_metadata?.role === "admin" || user.app_metadata?.role === "admin") && (
+            <button
+              onClick={() => router.push("/admin")}
+              className="flex items-center cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded transition"
+            >
+              <FiUser size={18} />
+              Admin Paneli
+            </button>
+          )}
+          <button
+            onClick={handleLogout}
+            className="flex items-center cursor-pointer gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded transition"
+            aria-label="Çıxış et"
+          >
+            <FiLogOut size={20} />
+            Çıxış
+          </button>
+        </div>
       </div>
 
       {/* Başlıq və yeni elan */}
@@ -171,11 +206,7 @@ export default function ProfilePage() {
               key={ad.id}
               className="rounded-lg shadow hover:shadow-lg transition bg-white"
             >
-              <AdCard
-                ad={ad}
-                showControls={false}
-                isProfile={true}
-              />
+              <AdCard ad={ad} showControls={false} isProfile={true} />
               <div className="flex justify-between items-center border-t border-gray-200 px-4 py-3 gap-3">
                 <button
                   onClick={() => router.push(`/profile/edit/${ad.id}`)}
