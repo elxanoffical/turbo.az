@@ -9,8 +9,8 @@ const protectedRoutes = ["/profile", "/add", "/admin"];
 export async function middleware(request) {
   const requestUrl = new URL(request.url);
   const pathname = requestUrl.pathname;
-  const cookieStore = cookies();
-  const supabase = createServerClient(cookieStore);
+  const cookieStore = await cookies();
+  const supabase = await createServerClient(cookieStore);
 
   const { data: { session } } = await supabase.auth.getSession();
 

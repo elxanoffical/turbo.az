@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import AdDetailClient from "@/components/AdDetailClient";
 
 export default async function AdDetailPage({ params }) {
-  const cookieStore = cookies();
-  const supabase = createServerClient(cookieStore);
-  const { id } = params;
+  const resolvedParams = await params;
+  const cookieStore = await cookies();
+  const supabase = await createServerClient(cookieStore);
+  const { id } = resolvedParams;
 
   const { data: ad, error } = await supabase
     .from("car_ads")

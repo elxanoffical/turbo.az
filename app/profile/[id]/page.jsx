@@ -5,9 +5,10 @@ import Link from 'next/link';
 import AdDetailClient from "@/components/AdDetailClient";
 
 export default async function AdDetailPage({ params }) {
-  const cookieStore = cookies();
-  const supabase = createServerClient(cookieStore);
-  const { id } = params;
+  const resolvedParams = await params;
+  const cookieStore = await cookies();
+  const supabase = await createServerClient(cookieStore);
+  const { id } = resolvedParams;
 
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();

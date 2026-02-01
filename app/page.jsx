@@ -5,8 +5,8 @@ import FilterBar from "@/components/FilterBar";
 import Hero from "@/components/Hero";
 
 export default async function Home({ searchParams }) {
-  const cookieStore = cookies();
-  const supabase = createServerClient(cookieStore);
+  const cookieStore = await cookies();
+  const supabase = await createServerClient(cookieStore);
 
   try {
     const {
@@ -24,6 +24,7 @@ export default async function Home({ searchParams }) {
       )
       .eq("is_public", true);
 
+    const params = await searchParams;
     const {
       brand,
       model,
@@ -46,30 +47,30 @@ export default async function Home({ searchParams }) {
       seats,
       condition,
       market,
-    } = searchParams;
+    } = params;
 
-    if (brand) query.ilike("brand", `%${brand}%`);
-    if (model) query.ilike("model", `%${model}%`);
-    if (city) query.ilike("city", `%${city}%`);
-    if (body) query.eq("body", body);
+    if (brand) query.ilike("brand", `%${params.brand}%`);
+    if (model) query.ilike("model", `%${params.model}%`);
+    if (city) query.ilike("city", `%${params.city}%`);
+    if (body) query.eq("body", params.body);
     if (isNew === "true") query.eq("new", true);
     if (isNew === "false") query.eq("new", false);
     if (barter === "true") query.eq("barter", true);
-    if (price_min) query.gte("price", Number(price_min));
-    if (price_max) query.lte("price", Number(price_max));
-    if (year_min) query.gte("year", Number(year_min));
-    if (year_max) query.lte("year", Number(year_max));
-    if (mileage_min) query.gte("mileage", Number(mileage_min));
-    if (mileage_max) query.lte("mileage", Number(mileage_max));
-    if (engine) query.ilike("engine", `%${engine}%`);
-    if (color) query.ilike("color", `%${color}%`);
-    if (fuel) query.ilike("fuel", `%${fuel}%`);
-    if (transmission) query.ilike("transmission", `%${transmission}%`);
-    if (drive) query.ilike("drive", `%${drive}%`);
-    if (owners) query.eq("owners", owners);
-    if (seats) query.eq("seats", seats);
-    if (condition) query.ilike("condition", `%${condition}%`);
-    if (market) query.ilike("market", `%${market}%`);
+    if (price_min) query.gte("price", Number(params.price_min));
+    if (price_max) query.lte("price", Number(params.price_max));
+    if (year_min) query.gte("year", Number(params.year_min));
+    if (year_max) query.lte("year", Number(params.year_max));
+    if (mileage_min) query.gte("mileage", Number(params.mileage_min));
+    if (mileage_max) query.lte("mileage", Number(params.mileage_max));
+    if (engine) query.ilike("engine", `%${params.engine}%`);
+    if (color) query.ilike("color", `%${params.color}%`);
+    if (fuel) query.ilike("fuel", `%${params.fuel}%`);
+    if (transmission) query.ilike("transmission", `%${params.transmission}%`);
+    if (drive) query.ilike("drive", `%${params.drive}%`);
+    if (owners) query.eq("owners", params.owners);
+    if (seats) query.eq("seats", params.seats);
+    if (condition) query.ilike("condition", `%${params.condition}%`);
+    if (market) query.ilike("market", `%${params.market}%`);
 
     const { data: ads, error } = await query.order("created_at", {
       ascending: false,
@@ -78,10 +79,10 @@ export default async function Home({ searchParams }) {
     if (error) throw error;
 
     const dynamicTitle =
-      brand && model
-        ? `${brand} ${model} elanları`
-        : brand
-        ? `${brand} elanları`
+      params.brand && params.model
+        ? `${params.brand} ${params.model} elanları`
+        : params.brand
+        ? `${params.brand} elanları`
         : "Son Elanlar";
 
     return (
